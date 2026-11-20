@@ -31,8 +31,12 @@ function secret(name, bytes = 32) {
   return stored[name];
 }
 
+let version = '1.0.0';
+try { version = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version; } catch { /* keep default */ }
+
 export const config = {
   root,
+  version,
   env: env('NODE_ENV', 'development'),
   isProd: env('NODE_ENV') === 'production',
   port: Number(env('PORT', '3000')),
@@ -55,6 +59,16 @@ export const config = {
   geminiKey: env('GEMINI_API_KEY'),
   geminiModel: env('GEMINI_MODEL', 'gemini-2.5-flash'),
   geminiBaseUrl: env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta').replace(/\/+$/, ''),
+  // Product branding + who the dashboard's Help page sends people to (your agency / Indrix)
+  brand: {
+    name: env('BRAND_NAME', 'Replix'),
+    company: env('BRAND_COMPANY', 'Indrix'),
+    companyUrl: env('BRAND_COMPANY_URL', 'https://nandaniramoliya.github.io/Indrix/'),
+    siteUrl: env('PRODUCT_SITE_URL', 'https://replix.pages.dev/'),
+    supportWhatsapp: env('SUPPORT_WHATSAPP').replace(/\D/g, ''),
+    supportEmail: env('SUPPORT_EMAIL'),
+    supportHours: env('SUPPORT_HOURS', 'Mon–Sat, 10am–7pm'),
+  },
   defaultTimezone: env('DEFAULT_TIMEZONE', 'Asia/Kolkata'),
   defaultCountryCode: env('DEFAULT_COUNTRY_CODE', '91'),
   defaultCurrency: env('DEFAULT_CURRENCY', 'INR'),

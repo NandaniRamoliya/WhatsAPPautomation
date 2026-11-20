@@ -25,6 +25,9 @@ const TONES = {
   COMPLETED: 'done', CANCELLED: 'muted', NO_SHOW: 'danger', PAID: 'ok', COD: 'info', CONTACTED: 'info', WON: 'ok', LOST: 'muted',
   QUEUED: 'warn', RUNNING: 'info', DONE: 'done', FAILED: 'danger', APPROVED: 'ok', REJECTED: 'danger',
 };
+// Product wordmark: plain gradient text, no icon before the name (Indrix brand rule)
+export const Wordmark = ({ about, size = '' }) => html`<span class="wordmark ${size}"><b>${about?.brand?.name || 'Replix'}</b><small>by ${about?.brand?.company || 'Indrix'}</small></span>`;
+
 export const Badge = ({ status, children, tone }) => html`<span class="badge badge-${tone || TONES[status] || 'muted'}">${children || titleCase(status)}</span>`;
 
 export const Button = ({ children, variant = '', small, ...p }) => html`<button type="button" class="btn ${variant} ${small ? 'sm' : ''}" ...${p}>${children}</button>`;

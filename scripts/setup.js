@@ -20,7 +20,7 @@ async function askValid(q, d, check, hint) {
   }
 }
 
-console.log('\n=== WhatsApp Automation Kit – setup ===');
+console.log('\n=== Replix by Indrix – setup ===');
 console.log('Answer each question, or just press Enter to accept the default shown in [brackets].');
 console.log('Run other commands (like "npm run demo") AFTER this finishes.\n');
 if (fs.existsSync(envPath) && (await ask('.env already exists. Overwrite? (y/N)', 'N')).toLowerCase() !== 'y') {

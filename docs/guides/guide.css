@@ -32,7 +32,9 @@ kbd { font-size: 8.5pt; border: 1px solid #b8c4bd; border-bottom-width: 2px; bor
 .cover h1 { color: #fff; font-size: 36pt; margin: 0 0 4mm; }
 .cover .sub { font-size: 13pt; opacity: 0.95; max-width: 150mm; }
 .cover .meta { color: var(--muted); font-size: 9.5pt; display: grid; grid-template-columns: auto 1fr; gap: 1.5mm 8mm; }
-.cover .logo { font-size: 30pt; margin-bottom: 4mm; }
+.cover .wordmark { display: flex; align-items: baseline; gap: 3mm; margin-bottom: 5mm; font-weight: 800; letter-spacing: -.02em; }
+.cover .wordmark b { font-size: 30pt; color: #fff; }
+.cover .wordmark small { font-size: 12pt; font-weight: 600; opacity: .85; }
 .cover .pillrow { display: flex; flex-wrap: wrap; gap: 2mm; margin-top: 8mm; }
 .cover .pill { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.35); border-radius: 99px; padding: 1mm 4mm; font-size: 9pt; }
 

@@ -1,4 +1,4 @@
-# User Guide – Your WhatsApp Assistant
+# User Guide – Replix (your WhatsApp assistant), by Indrix
 
 This guide is for **business owners and staff**. No technical knowledge needed.
 Your assistant answers customers on WhatsApp 24 hours a day – it takes orders, books appointments, answers common
@@ -28,6 +28,7 @@ questions, and tells you whenever a person is needed. You manage everything from
 18. [Your daily & weekly routine](#18-your-daily--weekly-routine)
 19. [What your customers see](#19-what-your-customers-see)
 20. [Rules of WhatsApp you must know](#20-rules-of-whatsapp)
+    - [Help Centre](#20b-help-centre)
 21. [Questions & answers](#21-questions--answers)
 
 ---
@@ -343,6 +344,16 @@ a person, and **STOP** to stop receiving messages.
 5. **Restricted goods** – some products (prescription medicines, alcohol, tobacco…) have extra rules.
 6. **Costs** – customer-started conversations are mostly free/cheap; templates (especially marketing) are charged by
    Meta per message. Your developer can show current rates.
+
+## 20b. Help Centre
+
+Tap **📘 Help** at the bottom of the menu. You get:
+
+- a **search box** – type "holiday", "out of stock", "password", "AI" or "QR";
+- **Start here** – setup wizard → test the bot → go-live checklist;
+- **How do I…** – short step-by-step guides, each with a button that opens the right page;
+- **Something not working?** – common problems and their fixes;
+- FAQ, a glossary, the **User Guide PDF**, and **WhatsApp / email support** buttons that pre-fill your business name.
 
 ## 21. Questions & answers
 

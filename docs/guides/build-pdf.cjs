@@ -12,8 +12,8 @@ const OUT = path.join(DIR, '..');
 const TMP = fs.mkdtempSync(path.join(require('os').tmpdir(), 'guides-'));
 const MARGIN = { top: '16mm', bottom: '18mm', left: '16mm', right: '16mm' };
 const GUIDES = [
-  { src: 'developer-guide.html', out: 'Developer-Guide.pdf', title: 'Developer Guide – WhatsApp Automation Kit' },
-  { src: 'user-guide.html', out: 'User-Guide.pdf', title: 'User Guide – WhatsApp Automation Kit' },
+  { src: 'developer-guide.html', out: 'Developer-Guide.pdf', title: 'Developer Guide – Replix by Indrix' },
+  { src: 'user-guide.html', out: 'User-Guide.pdf', title: 'User Guide – Replix by Indrix' },
 ];
 
 const footer = (title) => `<div style="font-family:Inter,sans-serif;font-size:7.5px;color:#7a877f;width:100%;padding:0 16mm;display:flex;justify-content:space-between">
@@ -88,7 +88,7 @@ for h in outline:
     idx = h['page']  # +1 cover -1 zero-based
     if h['level'] == 0: parent = w.add_outline_item(h['label'], idx)
     else: w.add_outline_item(h['label'], idx, parent=parent)
-w.add_metadata({'/Title': title, '/Author': 'WhatsApp Automation Kit', '/Subject': title})
+w.add_metadata({'/Title': title, '/Author': 'Indrix', '/Subject': title})
 w.page_mode = '/UseOutlines'
 with open(out, 'wb') as f: w.write(f)
 print(out, len(w.pages), 'pages')

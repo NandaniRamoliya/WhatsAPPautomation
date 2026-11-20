@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Developer Guide – WhatsApp Automation Kit</title>
+<title>Developer Guide – Replix by Indrix</title>
 <link rel="stylesheet" href="guide.css">
 </head>
 <body>
@@ -10,15 +10,15 @@
 <section class="cover">
   <div>
     <div class="band">
-      <div class="logo">💬</div>
-      <div class="kicker">WhatsApp Automation Kit · Developer Guide</div>
+      <div class="wordmark"><b>Replix</b><small>by Indrix</small></div>
+      <div class="kicker">Developer Guide</div>
       <h1>From zero to delivering clients</h1>
       <div class="sub">How the code works, how to run it, how to set up every new client, what to do when something goes wrong, and how to grow it for future requirements.</div>
       <div class="pillrow"><span class="pill">Ordering</span><span class="pill">Appointments</span><span class="pill">Enquiries</span><span class="pill">Reminders &amp; follow-ups</span><span class="pill">Payments</span><span class="pill">Multi-client</span><span class="pill">AI: Claude · GPT · Gemini + RAG</span><span class="pill">Hindi · Gujarati</span><span class="pill">Sheets / CRM sync</span></div>
     </div>
   </div>
   <div class="meta">
-    <b>Version</b><span>1.0 · November 2026</span>
+    <b>Version</b><span>1.2 · November 2026</span>
     <b>Repository</b><span>github.com/NandaniRamoliya/WhatsAPPautomation (branch <code>main</code>)</span>
     <b>Stack</b><span>Node.js 22+ · Express 5 · SQLite (built into Node) · WhatsApp Cloud API · Preact dashboard</span>
     <b>Companion</b><span>User Guide (for business owners and staff) – <code>docs/User-Guide.pdf</code></span>
@@ -168,8 +168,10 @@ cd WhatsAPPautomation</code></pre></li>
     <tr><td><code>npm run users</code></td><td>Lists every login, its role and business, and which database file is used.</td></tr>
     <tr><td><code>npm run create-admin -- email "password"</code></td><td>Creates a super-admin, or <b>resets the password</b> of any existing login.</td></tr>
     <tr><td><code>npm run backup</code></td><td>Safe online copy of the database into <code>data/backups/</code> (keeps the newest 14).</td></tr>
-    <tr><td><code>npm test</code></td><td>Runs all 41 automated tests (no internet needed).</td></tr>
-    <tr><td><code>node docs/fiverr/src/build.cjs</code></td><td>Rebuilds the Fiverr gig gallery images (needs Playwright).</td></tr>
+    <tr><td><code>npm test</code></td><td>Runs all 42 automated tests (no internet needed).</td></tr>
+    <tr><td><code>npm run site:build</code></td><td>Builds the Replix product website into <code>product-site/dist/</code> (open <code>index.html</code> to preview).</td></tr>
+    <tr><td><code>npm run site:publish</code></td><td>Builds and uploads the product website to Cloudflare Pages (free). Needs <code>CLOUDFLARE_API_TOKEN</code> + <code>CLOUDFLARE_ACCOUNT_ID</code>.</td></tr>
+    <tr><td><code>npm run tunnel</code></td><td>Free Cloudflare Tunnel: gives the running bot an https address and prints the Meta webhook values.</td></tr>
     <tr><td><code>node docs/guides/build-pdf.cjs</code></td><td>Rebuilds these PDF guides from <code>docs/guides/*.html</code> (needs Playwright).</td></tr>
   </tbody>
 </table>
@@ -195,6 +197,10 @@ cd WhatsAPPautomation</code></pre></li>
     <tr><td><code>DEFAULT_TIMEZONE</code> / <code>DEFAULT_COUNTRY_CODE</code> / <code>DEFAULT_CURRENCY</code></td><td>Asia/Kolkata / 91 / INR</td><td>Defaults for new businesses and phone-number cleanup.</td></tr>
     <tr><td><code>SCHEDULER_INTERVAL_MS</code> / <code>SCHEDULER_ENABLED</code></td><td>30000 / true</td><td>How often reminders run; disable on extra copies of the server.</td></tr>
     <tr><td><code>LOG_LEVEL</code></td><td>info</td><td>debug, info, warn, error.</td></tr>
+    <tr><td><code>BRAND_NAME</code> / <code>BRAND_COMPANY</code> / <code>BRAND_COMPANY_URL</code></td><td>Replix / Indrix / Indrix website</td><td>Product name and maker shown on the login screen, sidebar, Help Centre and product website. Change them to white-label for another agency.</td></tr>
+    <tr><td><code>PRODUCT_SITE_URL</code></td><td>https://replix.pages.dev/</td><td>The product website (Help Centre footer; canonical address when publishing the site).</td></tr>
+    <tr><td><code>SUPPORT_WHATSAPP</code> / <code>SUPPORT_EMAIL</code> / <code>SUPPORT_HOURS</code></td><td>– / – / Mon–Sat, 10am–7pm</td><td>Your support contacts. They turn on the WhatsApp / email buttons in every client's Help Centre and the "Get a demo" buttons on the product website.</td></tr>
+    <tr><td><code>CLOUDFLARE_API_TOKEN</code> / <code>CLOUDFLARE_ACCOUNT_ID</code> / <code>SITE_PROJECT</code></td><td>– / – / replix</td><td>Only for <code>npm run site:publish</code>. Token permission: Account › Cloudflare Pages › Edit.</td></tr>
   </tbody>
 </table>
 <div class="callout tip"><span class="t">Auto-generated secrets</span>If <code>SESSION_SECRET</code>, <code>ENCRYPTION_KEY</code> or <code>WA_VERIFY_TOKEN</code> are empty, they are generated once and saved in <code>data/secrets.json</code>. Keep that file (and <code>.env</code>) in your backups.</div>
@@ -247,7 +253,8 @@ cd WhatsAPPautomation</code></pre></li>
 ├─ public/              <span class="c">dashboard (no build step)</span>
 │  ├─ index.html        <span class="c">import map + app mount</span>
 │  └─ app/              <span class="c">main.js (shell), lib.js, ui.js, styles.css, pages/*.js</span>
-├─ scripts/             <span class="c">setup, demo, users, create-admin, backup</span>
+├─ scripts/             <span class="c">setup, demo, users, create-admin, backup, publish-site, tunnel</span>
+├─ product-site/        <span class="c">Replix product website → Cloudflare Pages</span>
 ├─ test/                <span class="c">automated tests</span>
 ├─ deploy/              <span class="c">nginx config, cron example</span>
 ├─ docs/                <span class="c">guides (Markdown + these PDFs)</span>
@@ -578,7 +585,7 @@ No staff at all = the business itself is one calendar.</code></pre>
 <p>Public (no login): <code>GET/POST /webhook</code>, <code>GET /pay/:token</code>, <code>GET /paid/:token</code>, <code>POST /webhooks/razorpay/:bizId</code>, <code>POST /webhooks/stripe/:bizId</code>, <code>GET /q/:slug</code> (redirects to WhatsApp), <code>GET /q/:slug/qr.png</code>, <code>GET /health</code>.</p>
 
 <h2>20. Tests</h2>
-<p><code>npm test</code> runs 41 tests in an in-memory database, without internet:</p>
+<p><code>npm test</code> runs 42 tests in an in-memory database, without internet:</p>
 <table>
   <thead><tr><th>File</th><th>Covers</th></tr></thead>
   <tbody>
@@ -730,6 +737,16 @@ git pull
 npm ci --omit=dev
 pm2 restart whatsapp-bot</code></pre><p>New database migrations run automatically on start.</p></div>
 </div>
+<h3>Free with Cloudflare (the PinPage way)</h3>
+<p>Replix has two parts and Cloudflare hosts them differently:</p>
+<table class="t-narrow">
+  <thead><tr><th>Part</th><th>How</th></tr></thead>
+  <tbody>
+    <tr><td><b>Product website</b> (<code>product-site/</code>, static)</td><td><b>Cloudflare Pages</b>, free. Put <code>CLOUDFLARE_API_TOKEN</code> and <code>CLOUDFLARE_ACCOUNT_ID</code> in <code>.env</code>, run <code>npm run site:publish</code>. The first run creates the Pages project <code>replix</code> → <code>https://replix.pages.dev/</code> (if the name is taken Cloudflare adds a suffix; the script prints the real address). Script: <code>scripts/publish-site.js</code> – fills <code>{{placeholders}}</code>, writes robots.txt, sitemap.xml, 404 page and JSON-LD, then calls <code>wrangler pages deploy</code>.</td></tr>
+    <tr><td><b>Bot + dashboard</b> (Node.js server)</td><td>Cannot run on Pages: it needs a process that is always on (webhooks, SQLite, scheduler). Run it on your PC or a VPS and expose it with <b>Cloudflare Tunnel</b>: <code>npm run tunnel</code> for a quick <code>trycloudflare.com</code> address (demos), or a named tunnel on your own domain for live clients (fixed address, free). Steps: <code>docs/DEPLOYMENT.md</code> → "Free with Cloudflare".</td></tr>
+  </tbody>
+</table>
+<div class="callout warn"><span class="t">Why not the whole bot on Cloudflare?</span>Cloudflare Workers + D1 could host it, but the database layer is synchronous <code>node:sqlite</code> and the scheduler is an in-process loop – moving it is a rewrite of the data layer (Part G). A small VPS (or a PC) + tunnel gives the same free https with no code changes.</div>
 <h3>Production checklist</h3>
 <ul class="checklist">
   <li><code>NODE_ENV=production</code> and an https <code>PUBLIC_URL</code></li>
@@ -997,7 +1014,9 @@ registerJob('order.feedback', async (job) =&gt; {
 <h2>41. Recipe: branding and small UI changes</h2>
 <ul>
   <li>Brand colour: <code>--brand</code> and <code>--brand-strong</code> in <code>public/app/styles.css</code> (light and dark blocks).</li>
-  <li>Logo/name in the sidebar: <code>public/app/main.js</code> (<code>.brand</code> block).</li>
+  <li>Product name / maker (<b>Replix by Indrix</b>): <code>BRAND_NAME</code>, <code>BRAND_COMPANY</code> in <code>.env</code> – used by the login screen, sidebar wordmark, Help Centre (<code>GET /api/about</code>) and the product website. Brand rule: a plain gradient wordmark, no icon before the name (<code>.wordmark</code> in <code>styles.css</code>, <code>Wordmark</code> in <code>ui.js</code>).</li>
+  <li>Help Centre content: <code>public/app/pages/help.js</code> – <code>HOWTO</code> (step guides, grouped, with a link to the page), <code>TROUBLE</code>, <code>FAQ</code>, <code>GLOSSARY</code>. Add an item and it is searchable automatically.</li>
+  <li>Product website: <code>product-site/index.html</code> (+ <code>og.png</code>, <code>img/</code>; <code>product-site/src/build-images.cjs</code> regenerates them). Publish with <code>npm run site:publish</code>.</li>
   <li>Pay page look: <code>payPageHtml()</code> in <code>src/services/payments.js</code>.</li>
   <li>No build step – save the file and refresh the browser.</li>
 </ul>
@@ -1094,9 +1113,9 @@ registerJob('order.feedback', async (job) =&gt; {
     <tr><td><code>docs/User-Guide.pdf</code></td><td>For business owners and staff – every screen, industry playbooks (clinic, mart, cafe…), daily routine.</td></tr>
     <tr><td><code>docs/DEVELOPER_GUIDE.md</code></td><td>Markdown version of the technical reference.</td></tr>
     <tr><td><code>docs/CLIENT_ONBOARDING.md</code></td><td>Copy-paste requirements form and delivery checklist.</td></tr>
-    <tr><td><code>docs/FIVERR_GIG.md</code> + <code>docs/fiverr/</code></td><td>Ready-to-paste Fiverr gig (packages, description, FAQ) with delivery checklist per package, and gallery images.</td></tr>
     <tr><td><code>docs/META_WHATSAPP_SETUP.md</code></td><td>Detailed Meta setup and templates.</td></tr>
-    <tr><td><code>docs/DEPLOYMENT.md</code></td><td>VPS, Docker, Render step by step.</td></tr>
+    <tr><td><code>docs/DEPLOYMENT.md</code></td><td>Free Cloudflare (Pages + Tunnel), VPS, Docker, Render step by step.</td></tr>
+    <tr><td><code>product-site/</code></td><td>The Replix product website (published to Cloudflare Pages with <code>npm run site:publish</code>).</td></tr>
     <tr><td><code>docs/USE_CASES.md</code></td><td>100 business types mapped to presets and settings.</td></tr>
   </tbody>
 </table>

@@ -45,6 +45,9 @@ r.post('/auth/login', rateLimit('login', 10, 10 * 60_000), (req, res) => {
 
 r.post('/auth/logout', (_req, res) => { clearSessionCookie(res); ok(res); });
 
+// Public: product name, version and support contacts (login screen + Help page)
+r.get('/about', (_req, res) => ok(res, { brand: config.brand, version: config.version }));
+
 r.use(auth);
 
 r.get('/me', (req, res) => {

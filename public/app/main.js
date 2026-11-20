@@ -2,7 +2,7 @@
 import { render } from 'preact';
 import { useState, useEffect, useCallback } from 'preact/hooks';
 import { html, api, store, AppCtx, useInterval, beep, toast, act } from './lib.js';
-import { Button, Loading } from './ui.js';
+import { Button, Loading, Wordmark } from './ui.js';
 import { Overview } from './pages/overview.js';
 import { Orders } from './pages/orders.js';
 import { Appointments } from './pages/appointments.js';
@@ -59,7 +59,7 @@ function nav(biz, counts) {
   ].filter(Boolean);
 }
 
-function Login({ onDone }) {
+function Login({ onDone, about }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -69,7 +69,7 @@ function Login({ onDone }) {
     try { await api('/auth/login', { method: 'POST', body: { email, password } }); onDone(); } catch (err) { setError(err.message); }
   };
   return html`<div class="login"><form class="card" onSubmit=${submit}>
-    <div class="brand"><div class="brand-logo">💬</div><div>WhatsApp Assistant<small>Sign in to your dashboard</small></div></div>
+    <div class="login-head"><${Wordmark} about=${about} size="lg" /><p class="muted">WhatsApp automation dashboard – sign in to continue</p></div>
     ${error && html`<div class="alert alert-danger" role="alert">${error}</div>`}
     <div class="col">
       <div class="field"><label for="email">Email</label><input id="email" type="email" autocomplete="username" required value=${email} onInput=${(e) => setEmail(e.target.value)} /></div>
@@ -88,6 +88,7 @@ function App() {
   const [navOpen, setNavOpen] = useState(false);
   const [counts, setCounts] = useState({});
   const [pulse, setPulse] = useState(null);
+  const [about, setAbout] = useState(null);
 
   const loadMe = useCallback(async () => {
     try {
@@ -105,7 +106,7 @@ function App() {
     } catch (e) { toast(e.message, 'error'); setBiz(null); }
   }, []);
 
-  useEffect(() => { loadMe(); }, []);
+  useEffect(() => { loadMe(); api('/about').then((a) => { setAbout(a); document.title = `${a.brand.name} by ${a.brand.company}`; }).catch(() => {}); }, []);
   useEffect(() => { if (me) loadBiz(); }, [me]);
   useEffect(() => {
     const onHash = () => { setRoute(getRoute()); setNavOpen(false); window.scrollTo(0, 0); };
@@ -134,12 +135,12 @@ function App() {
   }, 8000);
 
   if (me === undefined) return html`<div class="boot">Loading…</div>`;
-  if (me === null) return html`<${Login} onDone=${loadMe} />`;
+  if (me === null) return html`<${Login} onDone=${loadMe} about=${about} />`;
 
   const isAdmin = me.user.role === 'superadmin';
   const switchBiz = (id) => { store.bizId = id; setPulse(null); setBiz(null); loadBiz(); location.hash = '#/overview'; };
   const logout = async () => { await act(() => api('/auth/logout', { method: 'POST' })); setMe(null); };
-  const ctx = { me, biz, reloadBiz: loadBiz, reloadMe: loadMe, switchBiz };
+  const ctx = { me, biz, about, reloadBiz: loadBiz, reloadMe: loadMe, switchBiz };
 
   let content;
   if (route === 'agency' && isAdmin) content = html`<${Agency} />`;
@@ -150,7 +151,7 @@ function App() {
   return html`<${AppCtx.Provider} value=${ctx}>
     <div class="shell ${navOpen ? 'nav-open' : ''}">
       <aside class="sidebar" aria-label="Main navigation">
-        <div class="brand"><div class="brand-logo">💬</div><div>${biz?.name || 'WhatsApp Assistant'}<small>${isAdmin ? 'Agency admin' : 'Dashboard'}</small></div></div>
+        <div class="brand"><div class="brand-biz">${biz?.name || (isAdmin ? 'Agency admin' : 'Dashboard')}</div><${Wordmark} about=${about} size="sm" /></div>
         ${isAdmin && html`<div class="biz-switch">
           <select aria-label="Choose business" value=${store.bizId} onChange=${(e) => switchBiz(e.target.value)}>
             ${me.businesses.length === 0 && html`<option value="">No businesses yet</option>`}
@@ -165,12 +166,13 @@ function App() {
         <div class="sidebar-foot">
           <div class="muted small">${me.user.email}</div>
           <button class="link" onClick=${logout}>Sign out</button>
+          <div class="muted small powered">${about ? `${about.brand.name} v${about.version} · by ${about.brand.company}` : ''}</div>
         </div>
       </aside>
       <main class="main">
         <div class="topbar">
           <button class="icon-btn" aria-label="Open menu" onClick=${() => setNavOpen(!navOpen)}>☰</button>
-          <strong>${biz?.name || 'WhatsApp Assistant'}</strong>
+          <strong>${biz?.name || about?.brand?.name || 'Replix'}</strong>
         </div>
         ${content}
       </main>

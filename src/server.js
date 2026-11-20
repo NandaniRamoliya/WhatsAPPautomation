@@ -34,6 +34,9 @@ const nm = (p) => path.join(config.root, 'node_modules', p);
 app.get('/vendor/preact.mjs', (_q, s) => s.sendFile(nm('preact/dist/preact.mjs')));
 app.get('/vendor/hooks.mjs', (_q, s) => s.sendFile(nm('preact/hooks/dist/hooks.mjs')));
 app.get('/vendor/htm.mjs', (_q, s) => s.sendFile(nm('htm/dist/htm.module.js')));
+// Guides as PDF (linked from the dashboard's Help page)
+app.get('/guides/user-guide.pdf', (_q, s) => s.sendFile(path.join(config.root, 'docs/User-Guide.pdf')));
+app.get('/guides/developer-guide.pdf', (_q, s) => s.sendFile(path.join(config.root, 'docs/Developer-Guide.pdf')));
 app.use(express.static(path.join(config.root, 'public'), { index: 'index.html', maxAge: config.isProd ? '1h' : 0 }));
 app.get(/^\/(?!api\/|webhook|pay\/|q\/).*/, (_req, res) => res.sendFile(path.join(config.root, 'public', 'index.html')));
 
@@ -48,7 +51,7 @@ const isMain = process.argv[1] && path.resolve(process.argv[1]) === path.resolve
 if (isMain) {
   const created = ensureSuperAdmin();
   const server = app.listen(config.port, () => {
-    log.info(`WhatsApp Automation Kit running on port ${config.port}`, { publicUrl: config.publicUrl, env: config.env });
+    log.info(`Replix by Indrix running on port ${config.port}`, { publicUrl: config.publicUrl, env: config.env });
     console.log(`\n  Dashboard:   ${config.publicUrl}\n  Webhook URL: ${config.publicUrl}/webhook\n  Verify token: ${config.verifyToken}\n`);
     if (created) {
       console.log(`  First login created -> email: ${created.email}  password: ${created.password}`);

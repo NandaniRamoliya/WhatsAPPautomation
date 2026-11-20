@@ -159,7 +159,7 @@ export function testPayload(biz) {
 
 /** Google Apps Script the owner pastes into their sheet (Extensions -> Apps Script). */
 export function sheetsScript(token = '') {
-  return `// WhatsApp Assistant -> Google Sheets
+  return `// Replix (WhatsApp) -> Google Sheets
 // 1. Paste this in Extensions > Apps Script, then Deploy > New deployment > Web app
 //    (Execute as: Me, Who has access: Anyone). Copy the Web app URL into the dashboard.
 const TOKEN = '${token}';

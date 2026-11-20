@@ -1,6 +1,7 @@
-# WhatsApp Automation Kit
+# Replix <sub>by Indrix</sub>
 
-**A ready-to-deliver WhatsApp Cloud API platform for any local business.** You enter the client's details in a
+**Replix** is a ready-to-deliver WhatsApp Cloud API platform for any local business.** Product website: https://replix.pages.dev/ · made by [Indrix](https://nandaniramoliya.github.io/Indrix/).
+ You enter the client's details in a
 friendly dashboard and the bot is ready: **orders, appointments, enquiries, reminders, payments, follow-ups,
 reviews, recalls and a shared inbox.** One server runs as many client businesses as you like.
 
@@ -28,10 +29,11 @@ Bot:      ✅ Booking ho gayi! Toothache – Dr. Mehta · 📅 Sat, 21 Nov, 10:3
 | 💬 **Inbox** | Every chat, human handoff ("talk to us"), staff replies with automatic bot pause, attachments |
 | 📣 **Growth** | Broadcasts to opted-in customers, one-click Meta template creation, QR code & short link, CSV import of existing customers with automatic recalls |
 | 🧭 **No-code dashboard** | Setup wizard with **12 business presets**, every bot message editable (English + Hinglish), settings in plain language, live sound alerts, mobile friendly, dark mode |
+| 📘 **Help Centre** | Built into the dashboard: searchable step-by-step guides, troubleshooting, glossary, FAQ, User Guide PDF download and one-tap WhatsApp / email support (your agency's contacts from `.env`) |
 | 📱 **Simulator** | Test the whole bot in the browser – no Meta account needed – with "fast-forward time" for reminders |
 | 🏢 **Agency mode** | Many clients on one server, each with its own number, data and logins; super-admin console |
 | 📲 **Same number as the phone app** | Supports Meta's WhatsApp Business app + API coexistence: when the owner replies from the phone, the bot steps back for that chat |
-| 🔒 **Production-grade** | Webhook signature check, de-duplication, per-customer ordering, 24h-window & template fallback, encrypted secrets, roles, audit log, backups, 41 automated tests |
+| 🔒 **Production-grade** | Webhook signature check, de-duplication, per-customer ordering, 24h-window & template fallback, encrypted secrets, roles, audit log, backups, 42 automated tests |
 
 Works for **100+ business types** – see [docs/USE_CASES.md](docs/USE_CASES.md).
 
@@ -62,18 +64,34 @@ Log in → **Test the bot** → say "Hi". Demo logins: `kirana@demo.test`, `dent
 
 Full checklist + client requirements form: [docs/CLIENT_ONBOARDING.md](docs/CLIENT_ONBOARDING.md).
 
+## Deploy free with Cloudflare (like PinPage)
+
+Replix has two parts:
+
+| Part | Where | Cost |
+|---|---|---|
+| **Product website** (`product-site/`) – the marketing page | **Cloudflare Pages** → `https://replix.pages.dev/` | Free |
+| **Bot + dashboard** (Node.js server: webhooks, database, reminders) | Your PC / a VPS / Render, made reachable with **Cloudflare Tunnel** | Free tunnel; server from ₹0 (your PC) |
+
+```bash
+npm run site:build     # preview: open product-site/dist/index.html
+npm run site:publish   # needs CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID in .env
+npm run tunnel         # free https://xxxx.trycloudflare.com address for the bot (keep npm start running)
+```
+
+Step by step (token permissions, named tunnel on your own domain, Meta webhook): [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#free-with-cloudflare).
+
 ## Documentation
 
 | Guide | For |
 |---|---|
-| 📕 [docs/Developer-Guide.pdf](docs/Developer-Guide.pdf) | **PDF, 46 pages** – from zero to delivering clients: how the code works, every file, new-client playbook, "if this happens, do this", recipes with code, future scope |
-| 📗 [docs/User-Guide.pdf](docs/User-Guide.pdf) | **PDF, 40 pages** – for owners & staff, with screenshots: every screen, playbooks for clinics, marts, cafes, pharmacies, salons, gyms, coaching, services |
-| 💼 [docs/FIVERR_GIG.md](docs/FIVERR_GIG.md) | **Ready-to-paste Fiverr gig** (title, packages, description, FAQ, tags) + delivery checklist per package; gallery images in `docs/fiverr/` |
+| 📕 [docs/Developer-Guide.pdf](docs/Developer-Guide.pdf) | **PDF, 49 pages** – from zero to delivering clients: how the code works, every file, new-client playbook, "if this happens, do this", recipes with code, future scope |
+| 📗 [docs/User-Guide.pdf](docs/User-Guide.pdf) | **PDF, 49 pages** – for owners & staff, with screenshots: every screen, playbooks for clinics, marts, cafes, pharmacies, salons, gyms, coaching, services |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Business owners & staff (non-technical) – every screen explained |
 | [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) | Developers – architecture, data model, engine, API reference, extending, security, testing |
 | [docs/CLIENT_ONBOARDING.md](docs/CLIENT_ONBOARDING.md) | Agencies – requirements form, delivery checklist, pricing ideas |
 | [docs/META_WHATSAPP_SETUP.md](docs/META_WHATSAPP_SETUP.md) | Meta app, permanent token, webhook, templates, going live, error codes |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | VPS (PM2 + nginx + https), Docker, Render, backups, updates |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Free Cloudflare (Pages site + Tunnel), VPS (PM2 + nginx + https), Docker, Render, backups, updates |
 | [docs/USE_CASES.md](docs/USE_CASES.md) | 100 business types mapped to presets and settings |
 
 ## Project layout
@@ -81,8 +99,9 @@ Full checklist + client requirements form: [docs/CLIENT_ONBOARDING.md](docs/CLIE
 ```
 src/            server, WhatsApp client, conversation engine + flows, services, routes, presets
 public/         dashboard (Preact + htm, no build step)
+product-site/   Replix marketing website (published to Cloudflare Pages)
 test/           automated tests (npm test)
-scripts/        setup, demo data, create-admin, backup
+scripts/        setup, demo data, create-admin, backup, publish-site, tunnel
 deploy/         nginx config, cron example
 docs/           guides
 ```
@@ -90,12 +109,12 @@ docs/           guides
 ## Tech
 
 Node.js 22 · Express 5 · SQLite (`node:sqlite`, WAL) · WhatsApp Cloud API (Graph) · Preact + htm · optional
-Anthropic Claude for AI (structured outputs, prompt caching) · SQLite FTS5 for knowledge search · unpdf for PDF text. No native modules, no frontend build, no external database.
+AI with Claude, OpenAI GPT or Google Gemini (structured outputs) · SQLite FTS5 for knowledge search · unpdf for PDF text. No native modules, no frontend build, no external database.
 
 ## Testing
 
 ```bash
-npm test   # 41 tests: ordering, booking, AI/RAG (Claude, OpenAI, Gemini), quick replies, languages, integrations, payments, webhooks – no network needed
+npm test   # 42 tests: ordering, booking, AI/RAG (Claude, OpenAI, Gemini), quick replies, languages, integrations, payments, webhooks – no network needed
 ```
 
 ## Important

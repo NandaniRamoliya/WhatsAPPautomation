@@ -4,6 +4,7 @@ One server runs **all** your client businesses. Pick one option:
 
 | Option | Best for | Effort |
 |---|---|---|
+| [Free with Cloudflare](#free-with-cloudflare) | Product website on Cloudflare Pages + bot on your PC/VPS via Cloudflare Tunnel (the PinPage way) | 15 min |
 | [A. Ubuntu VPS + PM2 + nginx](#a-ubuntu-vps-recommended) | Agencies, many clients, lowest cost | 30 min |
 | [B. Docker / Docker Compose](#b-docker) | If you already use Docker | 15 min |
 | [C. Render (PaaS)](#c-render) | No server admin | 10 min |
@@ -13,6 +14,69 @@ Requirements everywhere: **Node.js 22.13+**, a **persistent disk** for `data/` (
 **https** in front (Meta only calls https webhooks).
 
 ---
+
+## Free with Cloudflare
+
+Replix is two things, and Cloudflare hosts them differently:
+
+1. **The product website** (`product-site/`) is static HTML → **Cloudflare Pages**, free, exactly like PinPage.
+2. **The bot + dashboard** is a Node.js server that must run all the time (WhatsApp webhooks, the SQLite
+   database, reminders every 30 seconds). Cloudflare Pages cannot run it. It runs on **your PC, a VPS or Render**,
+   and **Cloudflare Tunnel** gives it a free https address – no router setup, no open ports, no certificate work.
+
+### 1. Product website on Cloudflare Pages
+
+One-time:
+1. Free account at https://dash.cloudflare.com (the same one used for PinPage works).
+2. **My Profile → API Tokens → Create token → Custom token**. Permission: **Account › Cloudflare Pages › Edit**.
+   Copy the token.
+3. **Workers & Pages** → copy the **Account ID**.
+4. In `.env`:
+   ```
+   CLOUDFLARE_API_TOKEN=...
+   CLOUDFLARE_ACCOUNT_ID=...
+   SUPPORT_WHATSAPP=9198XXXXXXXX      # "Get a demo" buttons open this WhatsApp
+   SUPPORT_EMAIL=you@example.com      # optional
+   ```
+
+Every time you change `product-site/index.html`:
+```bash
+npm run site:build      # optional preview: open product-site/dist/index.html
+npm run site:publish    # creates the Pages project "replix" the first time, then uploads
+```
+The script prints the live address – normally **https://replix.pages.dev/**. If that name was already taken,
+Cloudflare adds a suffix (like PinPage's `pinpage-8no.pages.dev`): put the printed address in
+`PRODUCT_SITE_URL` and update the links on the Indrix website and portfolio.
+
+Own domain: Pages project → **Custom domains → Set up a domain**, then set `PRODUCT_SITE_URL=https://yourdomain/`
+and publish again (canonical link, sitemap and share image use it). Google: add the address in Search Console and
+put the code in `SITE_GOOGLE_VERIFY`.
+
+### 2. The bot on your PC or server + Cloudflare Tunnel
+
+**Quick tunnel (demos, testing – no account, no domain):**
+```bash
+npm start          # terminal 1
+npm run tunnel     # terminal 2 – prints https://xxxx.trycloudflare.com + the exact Meta webhook values
+```
+Put the printed address in `.env` as `PUBLIC_URL` and restart `npm start`. In Meta → WhatsApp → Configuration use
+`https://xxxx.trycloudflare.com/webhook` and the verify token it prints. The address changes each time the tunnel
+restarts, so use this for demos only. (`npm run tunnel` uses `cloudflared` if installed, otherwise downloads it once
+with npx.)
+
+**Named tunnel (live clients – fixed address, still free; needs a domain on Cloudflare):**
+```bash
+cloudflared tunnel login                               # opens the browser, pick your domain
+cloudflared tunnel create replix
+cloudflared tunnel route dns replix bot.yourdomain.com
+cloudflared tunnel run --url http://localhost:3000 replix
+```
+Then `PUBLIC_URL=https://bot.yourdomain.com` and the webhook `https://bot.yourdomain.com/webhook`. To start it with
+the computer: `cloudflared service install` (Windows/Linux/macOS). Run the app itself with PM2 (section A.4) so both
+survive restarts.
+
+> Running on a home PC is fine for one or two small clients, but the bot is offline whenever the PC is off or asleep.
+> For paying clients use a small VPS (section A) – the tunnel works there too, so you can skip nginx and certbot.
 
 ## Local testing with ngrok
 

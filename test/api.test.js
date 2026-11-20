@@ -74,6 +74,19 @@ test('webhook rejects bad signatures, accepts good ones, de-duplicates', async (
   }
 });
 
+test('about (public): product name, maker, version; Help guide PDF is served', async () => {
+  const r = await fetch(`${base}/api/about`);
+  assert.equal(r.status, 200);
+  const j = await r.json();
+  assert.equal(j.brand.name, 'Replix');
+  assert.equal(j.brand.company, 'Indrix');
+  assert.match(j.version, /^\d+\.\d+\.\d+$/);
+  assert.ok(!JSON.stringify(j).match(/secret|token|key/i), 'no secrets in the public about data');
+  const pdf = await fetch(`${base}/guides/user-guide.pdf`);
+  assert.equal(pdf.status, 200);
+  assert.equal(pdf.headers.get('content-type'), 'application/pdf');
+});
+
 test('auth: login required, CSRF header enforced, wrong password rejected', async () => {
   let r = await fetch(`${base}/api/me`);
   assert.equal(r.status, 401);

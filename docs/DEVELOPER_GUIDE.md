@@ -1,6 +1,6 @@
 # Developer Guide
 
-Everything a developer needs to run, understand, customise, extend and deploy the **WhatsApp Automation Kit**.
+Everything a developer needs to run, understand, customise, extend and deploy **Replix by Indrix** (WhatsApp automation).
 For the non-technical client manual see [USER_GUIDE.md](USER_GUIDE.md). For delivering to a new client fast see [CLIENT_ONBOARDING.md](CLIENT_ONBOARDING.md).
 
 ---
@@ -79,8 +79,8 @@ Useful commands:
 |---|---|
 | `npm start` | Run the server (dashboard + webhook + scheduler) |
 | `npm run dev` | Same, restarts on file changes |
-| `npm test` | Full test suite (41 tests: engine, booking, API, webhook, AI, knowledge, integrations, languages, payments) – no network needed |
-| `node docs/guides/build-pdf.cjs` / `node docs/fiverr/src/build.cjs` | Rebuild the PDF guides / Fiverr gallery images (needs Playwright) |
+| `npm test` | Full test suite (42 tests: engine, booking, API, webhook, AI, knowledge, integrations, languages, payments) – no network needed |
+| `node docs/guides/build-pdf.cjs` | Rebuild the PDF guides (needs Playwright) |
 | `npm run demo` | Seed demo businesses (idempotent) |
 | `npm run create-admin -- you@x.com "Passw0rd!"` | Create a super-admin or reset any login's password |
 | `npm run users` | List all dashboard logins (which database, which business) |
@@ -172,8 +172,9 @@ public/
   index.html             import map + mount point
   app/main.js            shell, login, navigation, live alerts, router
   app/lib.js, ui.js      helpers + reusable components (forms, tables, modals, editors)
-  app/pages/*.js         one file per screen
-scripts/                 setup, demo seed, create-admin, backup
+  app/pages/*.js         one file per screen (help.js = searchable Help Centre: HOWTO, TROUBLE, FAQ, GLOSSARY)
+scripts/                 setup, demo seed, create-admin, backup, publish-site (Cloudflare Pages), tunnel (Cloudflare Tunnel)
+product-site/            Replix product website (npm run site:publish)
 test/                    node:test suites + helpers (in-memory DB, simulated customers)
 deploy/                  nginx config, cron example
 docs/                    this guide and friends
@@ -203,6 +204,10 @@ Only **server-level** settings live in `.env`. Everything business-specific is i
 | `SCHEDULER_ENABLED` | true | Disable on extra replicas (only one process should run jobs) |
 | `LOG_LEVEL` | info | debug / info / warn / error |
 | `DB_FILE` | app.db | `:memory:` is used by tests |
+| `BRAND_NAME` / `BRAND_COMPANY` / `BRAND_COMPANY_URL` | Replix / Indrix / Indrix site | Name shown on login, sidebar wordmark, Help Centre, product website (`GET /api/about`) |
+| `PRODUCT_SITE_URL` | `https://replix.pages.dev/` | Product website address |
+| `SUPPORT_WHATSAPP` / `SUPPORT_EMAIL` / `SUPPORT_HOURS` | – | Turn on the support buttons in every Help Centre and the "Get a demo" buttons on the website |
+| `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` / `SITE_PROJECT` | – / – / replix | `npm run site:publish` only (token: Account › Cloudflare Pages › Edit) |
 
 ## 6. Data model
 
@@ -591,7 +596,7 @@ Manual end-to-end: **Test the bot** page + "⏩ Fast-forward time" to fire remin
 
 ## 20. Deployment & operations
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for VPS (PM2 + nginx + certbot), Docker, Render, backups and upgrades.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for **free Cloudflare** (product website on Cloudflare Pages via `npm run site:publish`, bot exposed with Cloudflare Tunnel via `npm run tunnel`), VPS (PM2 + nginx + certbot), Docker, Render, backups and upgrades.
 Operational must-haves: uptime monitor on `/health`, daily `npm run backup` (+ off-server copy), watch logs for
 `send failed` and `job failed`, keep `GRAPH_VERSION` current.
 

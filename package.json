@@ -1,7 +1,7 @@
 {
-  "name": "whatsapp-automation-kit",
-  "version": "1.0.0",
-  "description": "Ready-to-deliver WhatsApp Cloud API automation kit: ordering, appointments, enquiries, reminders, payments and a no-code dashboard for any business.",
+  "name": "replix",
+  "version": "1.2.0",
+  "description": "Replix by Indrix: ready-to-deliver WhatsApp Cloud API automation kit: ordering, appointments, enquiries, reminders, payments and a no-code dashboard for any business.",
   "type": "module",
   "private": true,
   "engines": {
@@ -15,7 +15,10 @@
     "create-admin": "node --disable-warning=ExperimentalWarning scripts/create-admin.js",
     "backup": "node --disable-warning=ExperimentalWarning scripts/backup.js",
     "test": "node --disable-warning=ExperimentalWarning --test --test-concurrency=1 \"test/*.test.js\"",
-    "users": "node --disable-warning=ExperimentalWarning scripts/list-users.js"
+    "users": "node --disable-warning=ExperimentalWarning scripts/list-users.js",
+    "site:build": "node --disable-warning=ExperimentalWarning scripts/publish-site.js build",
+    "site:publish": "node --disable-warning=ExperimentalWarning scripts/publish-site.js publish",
+    "tunnel": "node --disable-warning=ExperimentalWarning scripts/tunnel.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.11.0",

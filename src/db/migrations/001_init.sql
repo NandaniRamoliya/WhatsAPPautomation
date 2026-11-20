@@ -1,5 +1,5 @@
 -- =====================================================================
--- WhatsApp Automation Kit - initial schema
+-- Replix (WhatsApp automation) - initial schema
 -- Multi-tenant: every business-owned table carries business_id.
 -- Money is stored as INTEGER minor units (paise/cents) - never floats.
 -- Timestamps are ISO-8601 UTC strings (sortable as text).
