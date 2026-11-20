@@ -99,8 +99,8 @@ Step by step (token permissions, named tunnel on your own domain, Meta webhook):
 
 | Guide | For |
 |---|---|
-| 📕 [docs/Developer-Guide.pdf](docs/Developer-Guide.pdf) | **PDF, 50 pages** – from zero to delivering clients: how the code works, every file, new-client playbook, "if this happens, do this", recipes with code, future scope |
-| 📗 [docs/User-Guide.pdf](docs/User-Guide.pdf) | **PDF, 49 pages** – for owners & staff, with screenshots: every screen, playbooks for clinics, marts, cafes, pharmacies, salons, gyms, coaching, services |
+| 📕 [docs/Developer-Guide.pdf](docs/Developer-Guide.pdf) | **PDF, 49 pages** – from zero to delivering clients: how the code works, every file, new-client playbook, "if this happens, do this", recipes with code, future scope |
+| 📗 [docs/User-Guide.pdf](docs/User-Guide.pdf) | **PDF, 50 pages** – for owners & staff, with screenshots: every screen, playbooks for clinics, marts, cafes, pharmacies, salons, gyms, coaching, services |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Business owners & staff (non-technical) – every screen explained |
 | [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) | Developers – architecture, data model, engine, API reference, extending, security, testing |
 | [docs/CLIENT_ONBOARDING.md](docs/CLIENT_ONBOARDING.md) | Agencies – requirements form, delivery checklist, pricing ideas |
