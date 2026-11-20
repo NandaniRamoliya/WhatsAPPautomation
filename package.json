@@ -14,7 +14,8 @@
     "demo": "node --disable-warning=ExperimentalWarning scripts/seed-demo.js",
     "create-admin": "node --disable-warning=ExperimentalWarning scripts/create-admin.js",
     "backup": "node --disable-warning=ExperimentalWarning scripts/backup.js",
-    "test": "node --disable-warning=ExperimentalWarning --test --test-concurrency=1 \"test/*.test.js\""
+    "test": "node --disable-warning=ExperimentalWarning --test --test-concurrency=1 \"test/*.test.js\"",
+    "users": "node --disable-warning=ExperimentalWarning scripts/list-users.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.11.0",

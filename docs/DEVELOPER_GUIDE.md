@@ -81,7 +81,8 @@ Useful commands:
 | `npm run dev` | Same, restarts on file changes |
 | `npm test` | Full test suite (engine, booking, API, webhook, AI) – no network needed |
 | `npm run demo` | Seed demo businesses (idempotent) |
-| `npm run create-admin -- you@x.com "Passw0rd!"` | Create a super-admin or reset its password |
+| `npm run create-admin -- you@x.com "Passw0rd!"` | Create a super-admin or reset any login's password |
+| `npm run users` | List all dashboard logins (which database, which business) |
 | `npm run backup` | Consistent online DB backup to `data/backups/` (keeps 14) |
 
 ## 3. Architecture
