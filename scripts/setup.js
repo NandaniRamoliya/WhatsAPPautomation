@@ -10,17 +10,29 @@ const envPath = path.join(root, '.env');
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const ask = async (q, d = '') => (await rl.question(`${q}${d ? ` [${d}]` : ''}: `)).trim() || d;
 
-console.log('\n=== WhatsApp Automation Kit – setup ===\n');
+/** Ask until the answer passes the check; typed commands (e.g. "npm run demo") are rejected. */
+async function askValid(q, d, check, hint) {
+  for (;;) {
+    const v = await ask(q, d);
+    if (/^(npm|node|npx|git|cd)\b/i.test(v)) { console.log('  ↳ That looks like a command. Answer the question, or press Enter for the default.'); continue; }
+    if (!check || check(v)) return v;
+    console.log(`  ↳ ${hint}`);
+  }
+}
+
+console.log('\n=== WhatsApp Automation Kit – setup ===');
+console.log('Answer each question, or just press Enter to accept the default shown in [brackets].');
+console.log('Run other commands (like "npm run demo") AFTER this finishes.\n');
 if (fs.existsSync(envPath) && (await ask('.env already exists. Overwrite? (y/N)', 'N')).toLowerCase() !== 'y') {
   console.log('Keeping existing .env.');
 } else {
-  const port = await ask('Port', '3000');
-  const publicUrl = await ask('Public HTTPS URL (ngrok or your domain)', `http://localhost:${port}`);
-  const adminEmail = await ask('Admin email', 'admin@example.com');
-  let adminPassword = await ask('Admin password (min 8 chars, empty = generate)', '');
-  if (adminPassword.length < 8) adminPassword = crypto.randomBytes(9).toString('base64url');
-  const appSecret = await ask('Meta App Secret (optional, can add later)', '');
-  const anthropic = await ask('Anthropic API key for AI features (optional)', '');
+  const port = await askValid('Port', '3000', (v) => /^\d{2,5}$/.test(v) && Number(v) < 65536, 'Port must be a number, e.g. 3000.');
+  const publicUrl = (await askValid('Public HTTPS URL (ngrok or your domain)', `http://localhost:${port}`, (v) => /^https?:\/\/[^\s]+$/.test(v), 'Must start with http:// or https://, e.g. https://abc123.ngrok-free.app')).replace(/\/+$/, '');
+  const adminEmail = await askValid('Admin email', 'admin@example.com', (v) => /^\S+@\S+\.\S+$/.test(v), 'Enter a valid email address.');
+  let adminPassword = await askValid('Admin password (min 8 chars, Enter = generate one)', '', (v) => v === '' || v.length >= 8, 'Password must be at least 8 characters (or press Enter to generate one).');
+  if (!adminPassword) adminPassword = crypto.randomBytes(9).toString('base64url');
+  const appSecret = await askValid('Meta App Secret (optional, Enter to skip)', '', (v) => v === '' || /^[a-f0-9]{16,}$/i.test(v), 'App secret is a long hex string from Meta App > Settings > Basic (or press Enter to skip).');
+  const anthropic = await askValid('Anthropic API key for AI features (optional, Enter to skip)', '');
   const tpl = fs.readFileSync(path.join(root, '.env.example'), 'utf8');
   const set = (s, k, v) => s.replace(new RegExp(`^${k}=.*$`, 'm'), `${k}=${v}`);
   let env = tpl;
