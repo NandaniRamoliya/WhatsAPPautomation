@@ -1,0 +1,1015 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Developer Guide – WhatsApp Automation Kit</title>
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+
+<section class="cover">
+  <div>
+    <div class="band">
+      <div class="logo">💬</div>
+      <div class="kicker">WhatsApp Automation Kit · Developer Guide</div>
+      <h1>From zero to delivering clients</h1>
+      <div class="sub">How the code works, how to run it, how to set up every new client, what to do when something goes wrong, and how to grow it for future requirements.</div>
+      <div class="pillrow"><span class="pill">Ordering</span><span class="pill">Appointments</span><span class="pill">Enquiries</span><span class="pill">Reminders &amp; follow-ups</span><span class="pill">Payments</span><span class="pill">Multi-client</span><span class="pill">Optional AI</span></div>
+    </div>
+  </div>
+  <div class="meta">
+    <b>Version</b><span>1.0 · November 2026</span>
+    <b>Repository</b><span>github.com/NandaniRamoliya/WhatsAPPautomation (branch <code>main</code>)</span>
+    <b>Stack</b><span>Node.js 22+ · Express 5 · SQLite (built into Node) · WhatsApp Cloud API · Preact dashboard</span>
+    <b>Companion</b><span>User Guide (for business owners and staff) – <code>docs/User-Guide.pdf</code></span>
+  </div>
+</section>
+
+<nav class="toc"><h1>Contents</h1><ol id="toc"></ol></nav>
+
+<main>
+
+<!-- ============================ HOW TO READ ============================ -->
+<h2>How to use this guide</h2>
+<p class="lead">This guide takes you from "I have never seen this code" to "I can deliver a WhatsApp bot to a new client in a day, fix any problem, and build new features when a client asks".</p>
+<table>
+  <thead><tr><th>If you want to…</th><th>Read</th></tr></thead>
+  <tbody>
+    <tr><td>Understand WhatsApp automation from scratch</td><td>Part A – Foundations</td></tr>
+    <tr><td>Install and run the project on your computer</td><td>Part B – Run it</td></tr>
+    <tr><td>Understand every folder, file and how a message travels through the code</td><td>Part C – How it works inside</td></tr>
+    <tr><td>Deliver the bot to a new client</td><td>Part D – Delivering to clients</td></tr>
+    <tr><td>Fix something that went wrong</td><td>Part E – "If this happens, do this"</td></tr>
+    <tr><td>Change or add features</td><td>Part F – Customising &amp; extending (with code recipes)</td></tr>
+    <tr><td>Plan what to offer clients next</td><td>Part G – Future scope by client requirement</td></tr>
+  </tbody>
+</table>
+<div class="callout tip"><span class="t">Golden rule</span>About 90% of what clients ask for is <b>configuration in the dashboard</b>, not code. Always check Part D's "requirement → where to change it" table before opening the code editor.</div>
+
+<!-- ============================ PART A ============================ -->
+<section class="part-title"><div class="num">Part A</div><h1>Foundations</h1><p>What the product is, the WhatsApp concepts you must understand, and the technology choices.</p></section>
+
+<h2>1. The big picture in plain words</h2>
+<p>The kit is <b>one web application</b> that you run on a server. It does three jobs at the same time:</p>
+<div class="grid3">
+  <div class="card"><h4>🤖 The bot</h4><p>Receives every WhatsApp message sent to a client's business number and replies automatically with buttons and lists – taking orders, booking appointments, answering questions.</p></div>
+  <div class="card"><h4>🖥️ The dashboard</h4><p>A website where the business owner and staff see orders, appointments and chats, and change everything the bot says and does – without code.</p></div>
+  <div class="card"><h4>⏰ The scheduler</h4><p>A background timer that sends reminders, after-visit check-ins, review requests, recalls, cart reminders and broadcasts at the right time.</p></div>
+</div>
+<p>One server can run <b>many client businesses</b>. Each business has its own WhatsApp number, products or services, texts, settings, logins and data. You (the agency) have a super-admin login that sees all of them.</p>
+<h3>Who uses it</h3>
+<table class="t-narrow">
+  <thead><tr><th>Person</th><th>What they do</th></tr></thead>
+  <tbody>
+    <tr><td>Customer / patient</td><td>Only uses WhatsApp. Taps buttons, never installs anything.</td></tr>
+    <tr><td>Business owner</td><td>Dashboard: daily work + all settings, bot texts, team logins.</td></tr>
+    <tr><td>Staff (receptionist, shop helper)</td><td>Dashboard: orders, appointments, chats, customers. Cannot change settings.</td></tr>
+    <tr><td>Agency super-admin (you)</td><td>Creates client businesses, switches between them, pauses/deletes them, does WhatsApp connection.</td></tr>
+    <tr><td>Developer (you)</td><td>Runs the server, connects Meta, customises code when needed.</td></tr>
+  </tbody>
+</table>
+<h3>The three modules</h3>
+<table class="t-narrow">
+  <thead><tr><th>Module</th><th>Customer journey on WhatsApp</th></tr></thead>
+  <tbody>
+    <tr><td>🛒 Ordering</td><td>Categories → items (or type to search) → quantity → cart → delivery or pickup → address or 📍 location → notes → payment (Cash, UPI page with QR, Razorpay link) → confirmation → status updates. Also "My orders", one-tap reorder, cart reminder, prescription photos, native WhatsApp-catalogue orders.</td></tr>
+    <tr><td>📅 Booking</td><td>Service → staff or "any available" → triage questions → day → time → name → confirm → reminders (1 day + 2 hours) with Confirm / Reschedule / Cancel → aftercare after the visit → "how are you feeling?" check-in → review request (happy) or team alert (unhappy) → recall when the next visit is due.</td></tr>
+    <tr><td>❓ Enquiry</td><td>FAQ list + automatic answers when customers type a question; a lead form that asks the business's own questions and alerts the owner.</td></tr>
+    <tr><td>Always on</td><td>"Talk to us" human handoff (bot pauses), STOP/START, closed-hours message, photo/voice-note handling, English + Hinglish.</td></tr>
+  </tbody>
+</table>
+
+<h2>2. WhatsApp Cloud API – what you must know</h2>
+<p>Businesses cannot automate the normal WhatsApp app. Automation must use Meta's official <b>WhatsApp Cloud API</b>. This is how it works:</p>
+<div class="flow">
+  <div class="box"><b>Customer</b>WhatsApp app</div><div class="arr">→</div>
+  <div class="box alt"><b>Meta servers</b>WhatsApp Cloud API</div><div class="arr">→</div>
+  <div class="box dark"><b>Our server</b>POST /webhook</div><div class="arr">→</div>
+  <div class="box"><b>Reply</b>Graph API /messages</div><div class="arr">→</div>
+  <div class="box"><b>Customer</b>sees buttons</div>
+</div>
+<table class="t-narrow">
+  <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td>Meta Business account</td><td>The company account on business.facebook.com that owns WhatsApp accounts, apps and system users.</td></tr>
+    <tr><td>Meta app</td><td>Created on developers.facebook.com. Gives API access. <b>One app can serve all your clients.</b></td></tr>
+    <tr><td>WABA (WhatsApp Business Account)</td><td>A container of phone numbers and message templates. Its ID is the "WhatsApp Business Account ID".</td></tr>
+    <tr><td>Phone Number ID</td><td>A long number that identifies one WhatsApp number in the API. <b>Not</b> the phone number itself. Our webhook uses it to know which client a message belongs to.</td></tr>
+    <tr><td>Access token</td><td>Password for the API. The temporary one dies in 24 h; production uses a <b>System User permanent token</b>.</td></tr>
+    <tr><td>Webhook + verify token</td><td>The https URL Meta calls for every incoming message (<code>/webhook</code>). The verify token is a word you choose; Meta sends it once to prove you own the URL.</td></tr>
+    <tr><td>App secret</td><td>Used to sign every webhook (<code>X-Hub-Signature-256</code>). We verify it so nobody can fake messages.</td></tr>
+    <tr><td>24-hour window</td><td>After a customer's last message you may send <b>any</b> message for 24 hours. After that, only approved <b>templates</b>.</td></tr>
+    <tr><td>Message template</td><td>Pre-approved message text with <code>{{1}}</code> placeholders and optional quick-reply buttons. Categories: Utility (updates, reminders), Marketing (offers), Authentication.</td></tr>
+    <tr><td>Interactive messages</td><td>Reply buttons (max 3, title ≤ 20 chars), lists (max 10 rows, title ≤ 24 chars), call-to-action URL buttons. The kit enforces these limits automatically.</td></tr>
+    <tr><td>Quality rating &amp; limits</td><td>Meta rates each number from user feedback (blocks/reports). New numbers can start limited numbers of conversations per day; limits grow with quality and business verification.</td></tr>
+    <tr><td>Pricing</td><td>Meta charges per message for templates (marketing most expensive). Customer-started service replies are mostly free/cheap. Rates change – always check Meta's official rate card before quoting.</td></tr>
+  </tbody>
+</table>
+<div class="callout warn"><span class="t">Never use unofficial WhatsApp automation</span>Browser-automation or "WhatsApp Web" bots get numbers banned. This kit only uses the official Cloud API.</div>
+
+<h2>3. Technology stack and why</h2>
+<table class="t-narrow">
+  <thead><tr><th>Part</th><th>Choice and reason</th></tr></thead>
+  <tbody>
+    <tr><td>Runtime</td><td><b>Node.js 22.13+</b> (24 LTS recommended). Built-in <code>fetch</code>, built-in SQLite, built-in test runner – fewer dependencies.</td></tr>
+    <tr><td>Web server</td><td><b>Express 5</b>. Familiar; async errors are handled automatically.</td></tr>
+    <tr><td>Database</td><td><b>SQLite</b> via <code>node:sqlite</code> (WAL mode). One file (<code>data/app.db</code>), zero setup, nothing to compile – it installs on Windows, Mac and Linux identically. Handles hundreds of businesses on one small server.</td></tr>
+    <tr><td>Dashboard</td><td><b>Preact + htm</b> loaded through an import map. No bundler, no build step – edit a file and refresh.</td></tr>
+    <tr><td>Security</td><td>Node <code>crypto</code>: scrypt passwords, AES-256-GCM for stored tokens, HMAC-signed sessions and webhook checks.</td></tr>
+    <tr><td>Payments</td><td>UPI deep-link page with QR (free), Razorpay Payment Links (automatic confirmation).</td></tr>
+    <tr><td>AI (optional)</td><td>Anthropic Claude via <code>@anthropic-ai/sdk</code> with structured outputs; code validates every AI answer.</td></tr>
+    <tr><td>Dependencies</td><td>Only 6: <code>express</code>, <code>qrcode</code>, <code>preact</code>, <code>htm</code>, <code>@anthropic-ai/sdk</code>, <code>zod</code>.</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================ PART B ============================ -->
+<section class="part-title"><div class="num">Part B</div><h1>Run it</h1><p>Install on Windows, Mac or Linux, understand every command and setting, and fix the common first-day problems.</p></section>
+
+<h2>4. Install and run (Windows, Mac, Linux)</h2>
+<h3>Prerequisites</h3>
+<ul>
+  <li><b>Node.js 22.13 or newer</b> – download the LTS installer from nodejs.org. Check with <code>node -v</code>.</li>
+  <li><b>Git</b> – git-scm.com. Check with <code>git --version</code>.</li>
+  <li>A code editor (VS Code recommended).</li>
+</ul>
+<h3>Step by step (PowerShell on Windows – identical on Mac/Linux terminals)</h3>
+<ol class="steps">
+  <li><b>Get the code</b><pre><code>git clone https://github.com/NandaniRamoliya/WhatsAPPautomation.git
+cd WhatsAPPautomation</code></pre></li>
+  <li><b>Install dependencies</b> (creates <code>node_modules</code>)<pre><code>npm install</code></pre></li>
+  <li><b>Run the setup wizard</b> – it asks questions one by one. <b>Press Enter to accept the default in [brackets]</b>. Do not type other commands while it is asking.<pre><code>npm run setup</code></pre>
+    <table><thead><tr><th>Question</th><th>What to answer</th></tr></thead><tbody>
+      <tr><td>Port [3000]</td><td>Enter</td></tr>
+      <tr><td>Public HTTPS URL</td><td>Enter for now (later: your ngrok or domain URL)</td></tr>
+      <tr><td>Admin email / password</td><td>Your email and a password (8+ characters)</td></tr>
+      <tr><td>Meta App Secret / Anthropic key</td><td>Enter to skip (add later in <code>.env</code>)</td></tr>
+    </tbody></table></li>
+  <li><b>(Optional) create demo businesses</b> – Kirana, Dental clinic, Salon with sample data<pre><code>npm run demo</code></pre></li>
+  <li><b>Check logins</b><pre><code>npm run users</code></pre></li>
+  <li><b>Start</b><pre><code>npm start</code></pre>Open <b>http://localhost:3000</b>, sign in, click <b>Test the bot</b> and type "Hi". Stop the server with <kbd>Ctrl</kbd>+<kbd>C</kbd>.</li>
+</ol>
+<div class="callout note"><span class="t">Demo logins</span><code>kirana@demo.test</code>, <code>dental@demo.test</code>, <code>salon@demo.test</code> – password <code>demo12345</code>. They exist only after <code>npm run demo</code>.</div>
+<h3>Receive real WhatsApp messages on your computer</h3>
+<p>Meta can only call a public <b>https</b> URL. Use ngrok (or Cloudflare Tunnel):</p>
+<pre><code>ngrok http 3000          <span class="c"># copy the https://xxxx.ngrok-free.app address</span></code></pre>
+<p>Put it in <code>.env</code> as <code>PUBLIC_URL=https://xxxx.ngrok-free.app</code>, restart <code>npm start</code>, then follow section 24 (Meta setup).</p>
+
+<h2>5. Commands cheat sheet</h2>
+<table>
+  <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><code>npm start</code></td><td>Runs everything: dashboard, webhook, scheduler.</td></tr>
+    <tr><td><code>npm run dev</code></td><td>Same, but restarts automatically when you save a file.</td></tr>
+    <tr><td><code>npm run setup</code></td><td>Interactive wizard that writes <code>.env</code>.</td></tr>
+    <tr><td><code>npm run demo</code></td><td>Creates 3 demo businesses with logins (safe to run again).</td></tr>
+    <tr><td><code>npm run users</code></td><td>Lists every login, its role and business, and which database file is used.</td></tr>
+    <tr><td><code>npm run create-admin -- email "password"</code></td><td>Creates a super-admin, or <b>resets the password</b> of any existing login.</td></tr>
+    <tr><td><code>npm run backup</code></td><td>Safe online copy of the database into <code>data/backups/</code> (keeps the newest 14).</td></tr>
+    <tr><td><code>npm test</code></td><td>Runs all 24 automated tests (no internet needed).</td></tr>
+    <tr><td><code>node docs/guides/build-pdf.cjs</code></td><td>Rebuilds these PDF guides from <code>docs/guides/*.html</code> (needs Playwright).</td></tr>
+  </tbody>
+</table>
+
+<h2>6. Configuration (.env) reference</h2>
+<p><code>.env</code> holds only <b>server-level</b> settings. Everything about a business (number, catalogue, texts, hours…) is entered in the dashboard and stored in the database.</p>
+<table>
+  <thead><tr><th>Variable</th><th>Default</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>PORT</code></td><td>3000</td><td>Web port.</td></tr>
+    <tr><td><code>PUBLIC_URL</code></td><td>http://localhost:3000</td><td>Public address. <b>Must be https</b> for Meta. Used in webhook URL, payment links, QR links.</td></tr>
+    <tr><td><code>NODE_ENV</code></td><td>development</td><td><code>production</code> rejects unsigned webhooks, hides error details, uses secure cookies on https.</td></tr>
+    <tr><td><code>DATA_DIR</code></td><td>./data</td><td>Folder for <code>app.db</code>, <code>secrets.json</code>, <code>backups/</code>.</td></tr>
+    <tr><td><code>SESSION_SECRET</code></td><td>auto</td><td>Signs login cookies. Changing it logs everybody out.</td></tr>
+    <tr><td><code>ENCRYPTION_KEY</code></td><td>auto</td><td>Encrypts WhatsApp tokens and Razorpay secrets. <b>Back it up.</b> If lost, re-enter those secrets.</td></tr>
+    <tr><td><code>ADMIN_EMAIL</code> / <code>ADMIN_PASSWORD</code></td><td>admin@example.com / random</td><td>First super-admin – created only when there are no users yet.</td></tr>
+    <tr><td><code>GRAPH_VERSION</code></td><td>v24.0</td><td>Meta Graph API version – upgrading is a one-line change.</td></tr>
+    <tr><td><code>WA_VERIFY_TOKEN</code></td><td>auto</td><td>Word you type in Meta's webhook settings (shown in Settings → WhatsApp).</td></tr>
+    <tr><td><code>META_APP_SECRET</code></td><td>–</td><td>App secret for webhook signatures (per-business override possible).</td></tr>
+    <tr><td><code>ANTHROPIC_API_KEY</code> / <code>AI_MODEL</code></td><td>– / claude-opus-5-5</td><td>Enables optional AI understanding.</td></tr>
+    <tr><td><code>DEFAULT_TIMEZONE</code> / <code>DEFAULT_COUNTRY_CODE</code> / <code>DEFAULT_CURRENCY</code></td><td>Asia/Kolkata / 91 / INR</td><td>Defaults for new businesses and phone-number cleanup.</td></tr>
+    <tr><td><code>SCHEDULER_INTERVAL_MS</code> / <code>SCHEDULER_ENABLED</code></td><td>30000 / true</td><td>How often reminders run; disable on extra copies of the server.</td></tr>
+    <tr><td><code>LOG_LEVEL</code></td><td>info</td><td>debug, info, warn, error.</td></tr>
+  </tbody>
+</table>
+<div class="callout tip"><span class="t">Auto-generated secrets</span>If <code>SESSION_SECRET</code>, <code>ENCRYPTION_KEY</code> or <code>WA_VERIFY_TOKEN</code> are empty, they are generated once and saved in <code>data/secrets.json</code>. Keep that file (and <code>.env</code>) in your backups.</div>
+
+<!-- ============================ PART C ============================ -->
+<section class="part-title"><div class="num">Part C</div><h1>How it works inside</h1><p>The architecture, a file-by-file tour, the data model, and exactly what happens to every message.</p></section>
+
+<h2>7. Architecture and the journey of one message</h2>
+<div class="stack">
+  <div class="layer l1"><b>WhatsApp layer</b><span><code>src/whatsapp/</code> – builds messages within Meta's limits, calls the Graph API, enforces the 24-hour rule, logs everything.</span></div>
+  <div class="layer l2"><b>Conversation engine</b><span><code>src/engine/</code> – understands what the customer sent, remembers where they are (state), routes to the right flow, picks the right text.</span></div>
+  <div class="layer l3"><b>Flows</b><span><code>src/engine/flows/</code> – ordering, booking, enquiry: the actual conversations.</span></div>
+  <div class="layer l4"><b>Services</b><span><code>src/services/</code> – business rules: orders, payments, slots, reminders, notifications, jobs, AI, broadcasts.</span></div>
+  <div class="layer l5"><b>Database</b><span><code>src/db/</code> – SQLite tables; every row belongs to one business.</span></div>
+</div>
+<div class="flow">
+  <div class="box alt"><b>Dashboard</b>Preact pages</div><div class="arr">→</div>
+  <div class="box dark"><b>/api/*</b>login + business scope</div><div class="arr">→</div>
+  <div class="box"><b>Services</b>same rules as the bot</div><div class="arr">→</div>
+  <div class="box"><b>sender.js</b>customer notified</div>
+</div>
+<h3>What happens when a customer sends "Hi"</h3>
+<ol class="steps">
+  <li>Meta sends <code>POST /webhook</code> to our server (<code>src/routes/webhook.js</code>).</li>
+  <li>We check the <code>X-Hub-Signature-256</code> header against the <b>raw body</b> with the app secret. Wrong signature → 401.</li>
+  <li>We answer <b>200 immediately</b> (Meta retries slow answers) and continue in the background.</li>
+  <li>The business is found from <code>metadata.phone_number_id</code>. Unknown or paused → ignored.</li>
+  <li>The message id is inserted in <code>processed_events</code>. Already there → duplicate (a Meta retry) → skipped.</li>
+  <li>Messages are queued <b>per customer</b>, so two quick taps are processed in order, never in parallel.</li>
+  <li>We mark the message as read and show "typing…".</li>
+  <li><code>engine.handleIncoming()</code> creates/updates the customer (this opens the 24-hour window), stores the message for the inbox, and loads the session (state, cart, context) from the database.</li>
+  <li>The input is normalised (text, button choice, location, photo, catalogue order) and routed (section 10).</li>
+  <li>The flow replies through <code>sender.send()</code>, which chooses normal message vs template, sends via the Graph API, and logs the result.</li>
+  <li>The session is saved. If the server restarts now, the customer continues exactly where they were.</li>
+  <li>The dashboard polls <code>/api/pulse</code> every 8 seconds and beeps for new orders, bookings, enquiries and chats needing a reply.</li>
+</ol>
+
+<h2>8. Code tour – every folder and file</h2>
+<pre><code>WhatsAPPautomation/
+├─ src/                 <span class="c">server code</span>
+│  ├─ server.js         <span class="c">starts everything</span>
+│  ├─ config.js         <span class="c">reads .env, creates secrets</span>
+│  ├─ db/               <span class="c">database helper + migrations (schema)</span>
+│  ├─ lib/              <span class="c">crypto, time zones, money/phone/CSV helpers, logger</span>
+│  ├─ whatsapp/         <span class="c">message builders, Graph API client, sender</span>
+│  ├─ engine/           <span class="c">router, conversation context, session, texts, flows/</span>
+│  ├─ services/         <span class="c">business rules (orders, appointments, payments, jobs…)</span>
+│  ├─ presets/          <span class="c">12 business types with sample data</span>
+│  └─ routes/           <span class="c">webhook, public pages, dashboard API, auth middleware</span>
+├─ public/              <span class="c">dashboard (no build step)</span>
+│  ├─ index.html        <span class="c">import map + app mount</span>
+│  └─ app/              <span class="c">main.js (shell), lib.js, ui.js, styles.css, pages/*.js</span>
+├─ scripts/             <span class="c">setup, demo, users, create-admin, backup</span>
+├─ test/                <span class="c">automated tests</span>
+├─ deploy/              <span class="c">nginx config, cron example</span>
+├─ docs/                <span class="c">guides (Markdown + these PDFs)</span>
+└─ Dockerfile, docker-compose.yml, ecosystem.config.cjs (PM2), render.yaml</code></pre>
+<h3>Server files</h3>
+<table>
+  <thead><tr><th>File</th><th>What it does</th><th>Edit it when…</th></tr></thead>
+  <tbody>
+    <tr><td><code>src/server.js</code></td><td>Runs migrations, creates the first admin, mounts routes, serves the dashboard, starts the scheduler, handles errors.</td><td>Adding a new route file or middleware.</td></tr>
+    <tr><td><code>src/config.js</code></td><td>Loads <code>.env</code>; generates and saves missing secrets.</td><td>Adding a new environment variable.</td></tr>
+    <tr><td><code>src/db/index.js</code></td><td>Tiny wrapper: <code>all</code>, <code>get</code>, <code>run</code>, <code>insert</code>, <code>update</code>, <code>tx</code> (transaction), <code>migrate</code>.</td><td>Rarely (e.g. moving to Postgres).</td></tr>
+    <tr><td><code>src/db/migrations/001_init.sql</code></td><td>All tables and indexes.</td><td>Never edit after release – add <code>002_….sql</code> instead.</td></tr>
+    <tr><td><code>src/lib/crypto.js</code></td><td><code>encrypt/decrypt</code>, <code>hashPassword/verifyPassword</code>, signed tokens, HMAC.</td><td>Rarely.</td></tr>
+    <tr><td><code>src/lib/time.js</code></td><td>Time-zone maths with <code>Intl</code>: local time ↔ UTC, opening hours, "Today/Tomorrow" labels.</td><td>Rarely.</td></tr>
+    <tr><td><code>src/lib/util.js</code></td><td>Money (paise ↔ ₹), phone cleanup, CSV parse/export, <code>deepMerge</code>, <code>HttpError</code>.</td><td>Adding a currency symbol.</td></tr>
+    <tr><td><code>src/whatsapp/builders.js</code></td><td>Creates text, buttons, list, CTA, image, template messages; enforces Meta limits; <code>summarize()</code> for the inbox.</td><td>Adding a new message type (e.g. WhatsApp Flows).</td></tr>
+    <tr><td><code>src/whatsapp/cloudApi.js</code></td><td>Graph API client: send, mark read, phone info, templates, media download; plain-English error hints.</td><td>New Meta API call.</td></tr>
+    <tr><td><code>src/whatsapp/sender.js</code></td><td><b>The only door for outgoing messages.</b> Simulator, dry-run, 24-hour rule + template fallback, logging, delivery status updates.</td><td>Changing global sending behaviour.</td></tr>
+    <tr><td><code>src/engine/index.js</code></td><td>Normalises input, global commands, routing order, main menu, handoff. Holds the <code>FLOWS</code> list.</td><td>Registering a new flow; new global keyword.</td></tr>
+    <tr><td><code>src/engine/conversation.js</code></td><td>The <code>c</code> object every flow receives: <code>c.t()</code>, <code>c.say()</code>, <code>c.buttons()</code>, <code>c.pagedList()</code>, <code>c.setState()</code>, <code>c.pause()</code>…</td><td>Adding a helper for all flows.</td></tr>
+    <tr><td><code>src/engine/session.js</code></td><td>Load/save state, cart and context; pause/resume the bot for one chat.</td><td>Rarely.</td></tr>
+    <tr><td><code>src/engine/texts.js</code></td><td>Every bot sentence in English and Hinglish, grouped for the editor.</td><td>New text key; new language.</td></tr>
+    <tr><td><code>src/engine/flows/ordering.js</code></td><td>Ordering conversation.</td><td>Changing the ordering journey.</td></tr>
+    <tr><td><code>src/engine/flows/booking.js</code></td><td>Booking conversation incl. reminders, reschedule, check-in replies.</td><td>Changing the booking journey.</td></tr>
+    <tr><td><code>src/engine/flows/enquiry.js</code></td><td>FAQs and lead form; keyword matching.</td><td>Changing FAQ matching / lead logic.</td></tr>
+    <tr><td><code>src/services/business.js</code></td><td>Loads a business (cached), <b><code>DEFAULT_SETTINGS</code></b>, credentials, wa.me link.</td><td><b>Adding any new setting</b> (with a default).</td></tr>
+    <tr><td><code>src/services/setup.js</code></td><td>Create businesses/users, apply presets, first super-admin.</td><td>Changing onboarding defaults.</td></tr>
+    <tr><td><code>src/services/orders.js</code></td><td>Totals, delivery fee, create order (order numbers), idempotent payment confirmation, status changes + customer messages.</td><td>Discounts, taxes, new statuses.</td></tr>
+    <tr><td><code>src/services/payments.js</code></td><td>UPI link + pay page with QR; Razorpay link creation and signature check.</td><td>Adding a payment gateway.</td></tr>
+    <tr><td><code>src/services/appointments.js</code></td><td>Slots, race-safe booking, reschedule, cancel, complete; reminder/check-in/recall jobs.</td><td>Changing booking rules.</td></tr>
+    <tr><td><code>src/services/catalog.js</code>, <code>customers.js</code></td><td>Product queries/search; customer upsert, tags.</td><td>Better search; CRM fields.</td></tr>
+    <tr><td><code>src/services/templates.js</code></td><td>The 5 template "slots" and their Meta definitions.</td><td>Adding a business-initiated message type.</td></tr>
+    <tr><td><code>src/services/notify.js</code></td><td>WhatsApp alerts to owner/staff (template fallback).</td><td>Adding email/SMS alerts.</td></tr>
+    <tr><td><code>src/services/jobs.js</code>, <code>scheduler.js</code></td><td>Durable job queue and the background loop (cart nudges, auto-complete, cleanup).</td><td>New scheduled behaviour.</td></tr>
+    <tr><td><code>src/services/broadcasts.js</code></td><td>Template campaigns in throttled batches.</td><td>Campaign features.</td></tr>
+    <tr><td><code>src/services/ai.js</code></td><td>Optional Claude: typed orders → items; questions → answers from FAQs.</td><td>AI behaviour.</td></tr>
+    <tr><td><code>src/presets/index.js</code></td><td>12 business types: modules, settings, sample products/services/staff/FAQs.</td><td>Adding a business type.</td></tr>
+    <tr><td><code>src/routes/webhook.js</code></td><td>Meta webhook (verify, signature, de-dup, per-customer queue).</td><td>Rarely.</td></tr>
+    <tr><td><code>src/routes/public.js</code></td><td><code>/health</code>, <code>/pay/:token</code>, Razorpay webhook, <code>/q/:slug</code> short link + QR image.</td><td>New public page / integration webhook.</td></tr>
+    <tr><td><code>src/routes/middleware.js</code></td><td>Login cookie, CSRF header, business scoping, roles, rate limit, audit log.</td><td>Auth changes.</td></tr>
+    <tr><td><code>src/routes/api.js</code></td><td>All dashboard endpoints (section 19).</td><td>New dashboard feature.</td></tr>
+  </tbody>
+</table>
+<h3>Dashboard files</h3>
+<table>
+  <thead><tr><th>File</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><code>public/index.html</code></td><td>Import map pointing <code>preact</code>, <code>preact/hooks</code>, <code>htm</code> to <code>/vendor/*.mjs</code> (served from <code>node_modules</code>).</td></tr>
+    <tr><td><code>public/app/main.js</code></td><td>Login screen, app shell (sidebar adapts to enabled modules), business switcher for super-admins, live alerts, hash router (<code>ROUTES</code>).</td></tr>
+    <tr><td><code>public/app/lib.js</code></td><td><code>api()</code>, <code>useApi()</code> hook, toasts, money/date formatting, beep.</td></tr>
+    <tr><td><code>public/app/ui.js</code></td><td>Reusable components: Page, Card, Badge, Button, Modal, Tabs, schema-driven <code>FormFields</code>, <code>HoursEditor</code>, <code>QuestionsEditor</code>, generic <code>ResourceManager</code> (list + add/edit/delete).</td></tr>
+    <tr><td><code>public/app/pages/*.js</code></td><td>One file per screen: overview, orders, appointments, inbox, customers, leads, catalogue, services, faqs, botmessages, simulator, broadcasts, templates, settings, wizard, agency, help.</td></tr>
+    <tr><td><code>public/app/styles.css</code></td><td>All styles, light + dark themes via CSS variables (<code>--brand</code> = brand colour).</td></tr>
+  </tbody>
+</table>
+
+<h2>9. Data model</h2>
+<p>Every table has <code>business_id</code> (except users of the agency, de-duplication and migrations). <b>Money is stored in paise</b> (₹250 = 25000) to avoid rounding errors. <b>Times are stored in UTC</b>; the business time zone is used only for display and for working out slots.</p>
+<table>
+  <thead><tr><th>Table</th><th>Holds</th><th>Important columns</th></tr></thead>
+  <tbody>
+    <tr><td><code>businesses</code></td><td>Each client</td><td><code>modules</code>, <code>settings</code> (JSON), <code>texts</code> (JSON overrides), <code>language</code>, <code>timezone</code>, <code>wa_phone_number_id</code>, <code>wa_token_enc</code>, <code>active</code>, <code>setup_done</code></td></tr>
+    <tr><td><code>users</code></td><td>Dashboard logins</td><td><code>role</code> superadmin/owner/staff, <code>business_id</code></td></tr>
+    <tr><td><code>customers</code></td><td>People who messaged</td><td><code>phone</code>, <code>name</code>, <code>tags</code>, <code>opted_in</code>, <code>marketing_opt_in</code>, <code>last_inbound_at</code> (24-h window)</td></tr>
+    <tr><td><code>sessions</code></td><td>Where each customer is in the conversation</td><td><code>state</code>, <code>cart</code>, <code>ctx</code>, <code>bot_paused_until</code>, <code>needs_attention</code></td></tr>
+    <tr><td><code>products</code></td><td>Catalogue</td><td><code>price</code>, <code>category</code>, <code>unit</code>, <code>in_stock</code>, <code>active</code>, <code>sku</code>, <code>image_url</code></td></tr>
+    <tr><td><code>orders</code></td><td>Orders</td><td><code>order_no</code> (from 1001), <code>items</code> snapshot, totals, <code>fulfilment</code>, <code>payment_mode</code>, <code>payment_status</code>, <code>status</code>, <code>pay_token</code></td></tr>
+    <tr><td><code>services</code>, <code>staff</code>, <code>time_off</code></td><td>Booking setup</td><td><code>duration_min</code>, <code>aftercare</code>, <code>recall_days</code>; staff <code>service_ids</code>, <code>hours</code>; leave dates</td></tr>
+    <tr><td><code>appointments</code></td><td>Bookings</td><td><code>start_at</code>/<code>end_at</code> (UTC), <code>status</code>, <code>intake</code> answers. A <b>unique index</b> blocks two active bookings for the same staff at the same start time.</td></tr>
+    <tr><td><code>faqs</code>, <code>leads</code></td><td>Enquiry module</td><td><code>keywords</code>; <code>answers</code>, <code>status</code></td></tr>
+    <tr><td><code>messages</code></td><td>Every message in and out</td><td><code>body</code> (readable), <code>payload</code> (raw), <code>status</code> (sent/delivered/read/failed/skipped/simulated/dry_run), <code>error</code></td></tr>
+    <tr><td><code>jobs</code></td><td>Scheduled work</td><td><code>type</code>, <code>run_at</code>, <code>payload</code>, <code>ref</code> (e.g. <code>appt:12</code>), <code>status</code>, <code>attempts</code></td></tr>
+    <tr><td><code>broadcasts</code>, <code>processed_events</code>, <code>audit_log</code></td><td>Campaigns, de-duplication, who-did-what</td><td></td></tr>
+  </tbody>
+</table>
+<div class="callout tip"><span class="t">Settings never need a migration</span>Business settings are one JSON column. When you read a business, the stored JSON is merged over <code>DEFAULT_SETTINGS</code> (in <code>src/services/business.js</code>). Add a new setting with a default there and every existing business gets it automatically.</div>
+
+<h2>10. The conversation engine</h2>
+<h3>Normalising input</h3>
+<table class="t-narrow">
+  <thead><tr><th>WhatsApp sends</th><th>Engine sees</th></tr></thead>
+  <tbody>
+    <tr><td>Typed text</td><td><code>{ kind: 'text', text }</code></td></tr>
+    <tr><td>Button tap / list pick</td><td><code>{ kind: 'choice', id, text }</code></td></tr>
+    <tr><td>Template quick-reply tap</td><td><code>{ kind: 'choice', id: payload }</code> – same ids as normal buttons</td></tr>
+    <tr><td>Shared location</td><td><code>{ kind: 'location', location }</code></td></tr>
+    <tr><td>Photo, document, voice note, video, sticker</td><td><code>{ kind: 'media', mediaType, mediaId }</code></td></tr>
+    <tr><td>Order from the WhatsApp catalogue</td><td><code>{ kind: 'order', order }</code></td></tr>
+    <tr><td>WhatsApp Flow form reply</td><td><code>{ kind: 'form', data }</code></td></tr>
+  </tbody>
+</table>
+<h3>Routing order (first match wins)</h3>
+<ol class="steps">
+  <li><b>STOP / unsubscribe</b> → customer opted out (policy). <b>START</b> → opted back in.</li>
+  <li><b>Bot paused</b> (a human is handling the chat) → stay silent and flag "needs reply" – unless the customer types <code>menu</code>.</li>
+  <li><b>Global words</b>: hi, hello, namaste, menu, help… → main menu. human, agent, talk to someone → handoff. cancel, back → cancel the current step.</li>
+  <li><b>Closed hours</b> with "only collect messages" setting → reply once per day and flag for the team.</li>
+  <li><b>Button/list replies</b> → the flow that owns the id prefix (<code>ord:</code>, <code>bk:</code>, <code>enq:</code>).</li>
+  <li><b>Catalogue order</b> → ordering.</li>
+  <li><b>Text / location / photo during a step</b> → the flow that owns the current state.</li>
+  <li><b>Free text at the menu</b> → FAQ keywords → product search (or AI order understanding) → AI answer (if enabled).</li>
+  <li><b>Nothing matched</b> → polite main menu. The bot is never silent and never stuck.</li>
+</ol>
+<h3>Button IDs are the contract</h3>
+<p>Every button and list row has an id shaped like <code>prefix:action:argument</code>. When the customer taps it – even three days later on a template reminder – the router sends it to the right function.</p>
+<table>
+  <thead><tr><th>Id</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>menu</code>, <code>human</code></td><td>Main menu, talk to a person</td></tr>
+    <tr><td><code>ord:start</code>, <code>ord:cat:Dairy:0</code>, <code>ord:p:42</code>, <code>ord:q:2</code></td><td>Order now, category page 0, product 42, quantity 2</td></tr>
+    <tr><td><code>ord:checkout</code>, <code>ord:ful:pickup</code>, <code>ord:addr:same</code>, <code>ord:pay:upi</code></td><td>Checkout steps</td></tr>
+    <tr><td><code>ord:my</code>, <code>ord:reorder</code></td><td>My orders, reorder last</td></tr>
+    <tr><td><code>bk:svc:3</code>, <code>bk:st:any</code>, <code>bk:ia:0:1</code>, <code>bk:d:2026-11-21</code>, <code>bk:t:20261121T050000Z</code></td><td>Service, staff, triage answer, day, time slot (UTC)</td></tr>
+    <tr><td><code>bk:yes</code>, <code>bk:chg</code>, <code>bk:ok:17</code>, <code>bk:rs:17</code>, <code>bk:cx:17</code></td><td>Confirm, change time, reminder confirm / reschedule / cancel appointment 17</td></tr>
+    <tr><td><code>bk:ci:good:17</code></td><td>Check-in answer for appointment 17</td></tr>
+    <tr><td><code>enq:faqs:0</code>, <code>enq:q:5</code>, <code>enq:lead</code>, <code>enq:la:1:0</code></td><td>FAQ list, FAQ 5, start enquiry, lead answer</td></tr>
+  </tbody>
+</table>
+<h3>The conversation object <code>c</code></h3>
+<pre><code><span class="c">// every flow handler receives c</span>
+c.biz, c.customer, c.session, c.input, c.phone
+c.t('key', { vars })                  <span class="c">// text in the business language, with overrides</span>
+c.say(text)                           <span class="c">// plain message</span>
+c.buttons(body, [{ id, title }])      <span class="c">// up to 3 buttons</span>
+c.pagedList(body, label, rows, page, (n) =&gt; 'id-for-page-n')  <span class="c">// list with "More options"</span>
+c.cta(body, label, url)               <span class="c">// button that opens a link</span>
+c.setState('BK_DATE', { bk: {...} })  <span class="c">// remember where the customer is</span>
+c.reset()                             <span class="c">// back to MENU (cart is kept)</span>
+c.pause(); c.notifyOwner(text)        <span class="c">// human handoff + WhatsApp alert</span></code></pre>
+
+<h2>11. Ordering flow internals</h2>
+<div class="states"><span>MENU</span><i>→</i><span>ORD_BROWSE</span><i>→</i><span>ORD_QTY</span><i>→</i><span>ORD_CART</span><i>→</i><span>ORD_FULFIL</span><i>→</i><span>ORD_ADDRESS</span><i>→</i><span>ORD_NOTES</span><i>→</i><span>ORD_PAY</span><i>→</i><span>MENU</span></div>
+<ul>
+  <li>One category → it is skipped and items are shown directly. More than 10 rows → automatic "More options" pages.</li>
+  <li>Quantity by button (1, 2, 5) or typed number (1–99). The same product twice → quantities add up.</li>
+  <li><b>The cart is re-priced from the database</b> before showing it and before placing the order. Out-of-stock or hidden items are removed with a message. Customers always pay today's price.</li>
+  <li>Minimum order is checked at checkout. Delivery fee is free above the configured amount; pickup has no fee.</li>
+  <li>Delivery/pickup question appears only if both are enabled. Saved address is offered ("Deliver to this address?"); a 📍 location becomes an address with a Google Maps link.</li>
+  <li>Only <b>configured</b> payment modes are offered (UPI needs a UPI ID, online needs Razorpay keys). If only one, the question is skipped.</li>
+  <li><code>createOrder()</code> gives the next order number inside a transaction. Cash → <code>CONFIRMED</code> at once; UPI/online → <code>NEW</code> until paid.</li>
+  <li>Typed text while shopping → product search. Typed "cart"/"checkout" → shortcuts. With AI on, "2 kilo aata aur 1 maggi" → items added → cart shown for confirmation.</li>
+</ul>
+<table>
+  <thead><tr><th>Order status</th><th>Customer receives (editable text)</th></tr></thead>
+  <tbody>
+    <tr><td><code>NEW</code></td><td>Pay-now button (UPI page or Razorpay link)</td></tr>
+    <tr><td><code>CONFIRMED</code></td><td>Order confirmed + items + total + ETA (or "Payment received")</td></tr>
+    <tr><td><code>PREPARING</code> → <code>OUT_FOR_DELIVERY</code> / <code>READY</code> → <code>DELIVERED</code></td><td>Status update each step (cash reminder when out for delivery)</td></tr>
+    <tr><td><code>CANCELLED</code></td><td>Cancelled + the reason typed by staff</td></tr>
+  </tbody>
+</table>
+
+<h2>12. Booking flow internals</h2>
+<div class="states"><span>MENU</span><i>→</i><span>BK_STAFF</span><i>→</i><span>BK_INTAKE</span><i>→</i><span>BK_DATE</span><i>→</i><span>BK_TIME</span><i>→</i><span>BK_NAME</span><i>→</i><span>BK_CONFIRM</span><i>→</i><span>MENU</span></div>
+<h3>How free slots are calculated (<code>slotsFor</code>)</h3>
+<pre><code>for each staff member who does this service (or the chosen one):
+    skip the day if the staff member or the whole business is on leave
+    hours = staff's own weekly hours, else the business opening hours
+    for each opening range of that weekday (e.g. 10:00–13:30, 17:00–20:30):
+        start at the range start, step by "slot interval" minutes
+        keep the slot if  start + service duration  ≤ range end
+                     and  start ≥ now + minimum notice
+                     and  it does not overlap an active booking of that staff member
+"Any available" = all staff slots merged; booking picks the first free person.
+No staff at all = the business itself is one calendar.</code></pre>
+<h3>Why double booking cannot happen</h3>
+<p><code>book()</code> runs in an <b>immediate transaction</b> (one writer at a time), re-checks overlap for each candidate staff member, then inserts. A database <b>unique index</b> is the last guard. If two customers tap the same slot in the same second, the second gets "Sorry, that time was just taken" with fresh times.</p>
+<h3>Automatic timeline after booking</h3>
+<div class="timeline">
+  <div class="ev"><div class="when">Booking confirmed</div>Customer gets confirmation + address + map. Owner and the staff member get an alert. Reminder jobs are scheduled.</div>
+  <div class="ev"><div class="when">1 day before, 2 hours before (configurable)</div>Reminder with buttons I'll be there / Reschedule / Cancel. Outside 24 h → <code>appointment_reminder</code> template with the same button ids.</div>
+  <div class="ev"><div class="when">Staff taps "Visit done" (or auto after N hours)</div>Aftercare text of the service + the staff's note (prescription) is sent. Check-in and recall jobs are scheduled.</div>
+  <div class="ev"><div class="when">N days later (default 3)</div>"How are you feeling?" 😊 → Google review link. 😐/😟 → bot pauses, owner alerted, chat flagged.</div>
+  <div class="ev"><div class="when">Recall days later (e.g. 180)</div>"Time for your cleaning – Book now". Skipped if they already booked that service again.</div>
+</div>
+
+<h2>13. Enquiry flow internals</h2>
+<ul>
+  <li><b>FAQ matching</b>: each keyword found in the customer's message scores 3; each meaningful word shared with the question scores 1; the best FAQ with score ≥ 2 is answered.</li>
+  <li><b>Lead form</b>: asks <code>settings.enquiry.lead_questions</code> one by one. ≤ 3 options → buttons; more → list; none → typed answer. A question with label <code>name</code> fills the lead's name. Saved in <code>leads</code>, owner alerted.</li>
+</ul>
+
+<h2>14. Sending messages: 24-hour rule and templates</h2>
+<p>Everything goes through <code>send(biz, phone, message, { fallbackTemplate })</code> in <code>src/whatsapp/sender.js</code>:</p>
+<div class="flow">
+  <div class="box"><b>Is it a template?</b>send as is</div><div class="arr">→</div>
+  <div class="box"><b>Window open?</b>last message &lt; 24 h</div><div class="arr">→</div>
+  <div class="box alt"><b>No → template</b>if configured, else "skipped"</div><div class="arr">→</div>
+  <div class="box"><b>Simulator / not connected</b>stored only</div><div class="arr">→</div>
+  <div class="box dark"><b>Graph API</b>sent + logged</div>
+</div>
+<table>
+  <thead><tr><th>Template slot</th><th>Used for</th><th>Body</th><th>Buttons</th></tr></thead>
+  <tbody>
+    <tr><td><code>owner_alert</code></td><td>Alerts to owner/staff</td><td>New alert from your WhatsApp assistant: {{1}}</td><td>–</td></tr>
+    <tr><td><code>order_update</code></td><td>Late order status</td><td>Hi {{1}}, there is an update on your order: {{2}}</td><td>–</td></tr>
+    <tr><td><code>appointment_reminder</code></td><td>Reminders</td><td>Hi {{1}}, this is a reminder of your {{2}} appointment on {{3}} at {{4}}…</td><td>Confirm, Reschedule</td></tr>
+    <tr><td><code>appointment_checkin</code></td><td>After-visit check-in</td><td>Hi {{1}}, how are you feeling after your {{2}}?…</td><td>Better, Same, Not good</td></tr>
+    <tr><td><code>appointment_recall</code></td><td>Recalls</td><td>Hi {{1}}, your {{2}} at {{3}} is due…</td><td>Book now</td></tr>
+  </tbody>
+</table>
+<p>Dashboard → <b>Message templates → Submit all to Meta</b> creates all five and links them. Template quick replies are sent with <b>dynamic payloads</b> (e.g. <code>bk:ok:17</code>), so taps route back into the exact flow.</p>
+
+<h2>15. Scheduler and background jobs</h2>
+<p><code>src/services/scheduler.js</code> runs inside the web server every 30 seconds:</p>
+<table>
+  <thead><tr><th>Job / task</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><code>appt.reminder</code></td><td>Sends a reminder if the appointment is still active and the customer did not opt out.</td></tr>
+    <tr><td><code>appt.checkin</code></td><td>"How are you feeling?" after a completed visit.</td></tr>
+    <tr><td><code>appt.recall</code> / <code>service.recall</code></td><td>Repeat-visit reminder (from a visit, or from imported customers).</td></tr>
+    <tr><td><code>broadcast.run</code></td><td>Sends a campaign in batches of 200 (~12 messages/second).</td></tr>
+    <tr><td>Cart nudge</td><td>One reminder for carts idle longer than the configured minutes (only inside 24 h).</td></tr>
+    <tr><td>Auto-complete</td><td>Marks visits done N hours after the end time, if enabled.</td></tr>
+    <tr><td>Housekeeping</td><td>Removes old de-dup entries and finished jobs; restarts jobs stuck by a crash.</td></tr>
+  </tbody>
+</table>
+<p>Jobs live in the database, so they survive restarts. Failed jobs retry 3 times (5 minutes apart) then show <code>FAILED</code> in the <code>jobs</code> table. Run <b>one</b> scheduler per database.</p>
+
+<h2>16. Payments</h2>
+<table>
+  <thead><tr><th>Mode</th><th>How it works</th><th>Confirmation</th></tr></thead>
+  <tbody>
+    <tr><td>Cash (COD / pay at pickup)</td><td>Order confirmed immediately.</td><td>Not needed.</td></tr>
+    <tr><td>UPI (free)</td><td>"Pay now" button opens <code>/pay/&lt;token&gt;</code>: a page with a "Pay with any UPI app" button (<code>upi://pay</code>) and a QR code. A web page is used because <code>upi://</code> links are not tappable inside WhatsApp.</td><td>Owner checks the bank app → taps <b>Payment received</b>.</td></tr>
+    <tr><td>Online (Razorpay)</td><td>A Razorpay Payment Link is created per order.</td><td>Automatic: Razorpay calls <code>/webhooks/razorpay/&lt;business id&gt;</code> (event <code>payment_link.paid</code>), signature verified.</td></tr>
+  </tbody>
+</table>
+<div class="callout warn"><span class="t">Idempotent by design</span><code>confirmPayment()</code> only changes orders that are still <code>NEW</code>. A double webhook or a double click cannot confirm twice or message the customer twice. Never confirm a payment from a customer's screenshot.</div>
+
+<h2>17. Optional AI layer</h2>
+<ul>
+  <li>Enabled only when <code>ANTHROPIC_API_KEY</code> is set <b>and</b> the business switches it on (Settings → AI).</li>
+  <li><b>Typed orders</b>: the catalogue (id, name, unit) and the message go to Claude with a strict JSON schema. Our code drops unknown ids and silly quantities; prices always come from the database; the customer confirms the cart.</li>
+  <li><b>Questions</b>: Claude answers only from business details + FAQs, or says "not answerable" → the bot shows the menu / human option.</li>
+  <li>Settings in code: model from <code>AI_MODEL</code> (default <code>claude-opus-5-5</code>), low effort for fast replies, automatic fallback model if a request is declined, 25-second timeout. Any AI error silently falls back to the normal flow.</li>
+</ul>
+
+<h2>18. Multi-client model, roles and security</h2>
+<table class="t-narrow">
+  <thead><tr><th>Topic</th><th>How it is handled</th></tr></thead>
+  <tbody>
+    <tr><td>Client isolation</td><td>Every API query is scoped with the logged-in business id; edits/deletes include <code>AND business_id = ?</code>.</td></tr>
+    <tr><td>Roles</td><td>superadmin (all businesses, header <code>X-Business-Id</code>), owner (one business, everything), staff (daily work only).</td></tr>
+    <tr><td>Webhook authenticity</td><td>HMAC signature on the raw body; unsigned requests rejected in production.</td></tr>
+    <tr><td>Duplicates</td><td><code>processed_events</code> for messages and payment events.</td></tr>
+    <tr><td>Secrets</td><td>Tokens and Razorpay secrets encrypted (AES-256-GCM); never returned by the API (shown as ••••1234).</td></tr>
+    <tr><td>Passwords &amp; login</td><td>scrypt hashing; 10 login attempts per 10 minutes per IP; httpOnly signed cookie for 7 days.</td></tr>
+    <tr><td>CSRF</td><td>Every dashboard change must carry the header <code>X-Requested-With: wak</code>.</td></tr>
+    <tr><td>Privacy</td><td>STOP honoured; marketing consent separate; "Delete data" erases a customer; exports for records; audit log.</td></tr>
+  </tbody>
+</table>
+
+<h2>19. Dashboard frontend and REST API</h2>
+<p>To add a screen: create <code>public/app/pages/foo.js</code> exporting a component, add it to <code>ROUTES</code> and to <code>nav()</code> in <code>public/app/main.js</code>. Use <code>useApi('/endpoint')</code> to load data and <code>act(() =&gt; api(...), 'Saved')</code> to save with a toast.</p>
+<table>
+  <thead><tr><th>Endpoint (all under /api)</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>POST /auth/login</code>, <code>/auth/logout</code>, <code>/auth/password</code>, <code>GET /me</code></td><td>Login and current user</td></tr>
+    <tr><td><code>/admin/businesses</code> (GET, POST, PUT, DELETE)</td><td>Agency: list with usage, create with owner login, pause, delete</td></tr>
+    <tr><td><code>GET/PUT /business</code>, <code>POST /business/preset</code>, <code>/business/sample-data</code></td><td>Details, modules, settings, secrets, presets</td></tr>
+    <tr><td><code>PUT /business/whatsapp</code>, <code>POST …/test</code>, <code>…/subscribe</code>, <code>…/test-message</code></td><td>WhatsApp connection</td></tr>
+    <tr><td><code>GET /links</code>, <code>/qr</code>, <code>/stats</code>, <code>/pulse</code></td><td>Links, QR, Home numbers, live alerts</td></tr>
+    <tr><td><code>/products</code>, <code>/services</code>, <code>/staff</code>, <code>/faqs</code>, <code>/time-off</code> (CRUD)</td><td>Setup data; <code>/products/import</code>, <code>/products/export.csv</code></td></tr>
+    <tr><td><code>/orders</code>, <code>/orders/:id/status</code>, <code>/orders/:id/paid</code>, <code>/orders-export.csv</code></td><td>Orders</td></tr>
+    <tr><td><code>/appointments</code>, <code>/slots</code>, <code>…/:id/status</code>, <code>…/:id/reschedule</code>, export</td><td>Appointments</td></tr>
+    <tr><td><code>/customers</code> (+ import/export, delete = erase data), <code>/leads</code></td><td>CRM</td></tr>
+    <tr><td><code>/chats</code>, <code>/chats/:phone/messages|send|pause|resume|done</code>, <code>/media/:id</code></td><td>Inbox</td></tr>
+    <tr><td><code>/texts</code>, <code>/templates</code>, <code>/templates/create</code>, <code>/broadcasts</code>, <code>/team</code></td><td>Bot texts, templates, campaigns, logins</td></tr>
+    <tr><td><code>/sim/messages|message|reset|run-jobs</code></td><td>Simulator</td></tr>
+  </tbody>
+</table>
+<p>Public (no login): <code>GET/POST /webhook</code>, <code>GET /pay/:token</code>, <code>POST /webhooks/razorpay/:bizId</code>, <code>GET /q/:slug</code> (redirects to WhatsApp), <code>GET /q/:slug/qr.png</code>, <code>GET /health</code>.</p>
+
+<h2>20. Tests</h2>
+<p><code>npm test</code> runs 24 tests in an in-memory database, without internet:</p>
+<table>
+  <thead><tr><th>File</th><th>Covers</th></tr></thead>
+  <tbody>
+    <tr><td><code>test/ordering.test.js</code></td><td>Full order, UPI + idempotent payment, search, minimum order, stock changes, WhatsApp limits, reorder, location, handoff, STOP, Hinglish, text overrides</td></tr>
+    <tr><td><code>test/booking.test.js</code></td><td>Triage → booking, double-booking guard, "any staff", holidays, reminder → confirm, reschedule, cancel, aftercare, check-in branches, recall, template fallback, FAQ + lead</td></tr>
+    <tr><td><code>test/api.test.js</code></td><td>Webhook verify/signature/de-dup, login, CSRF, roles, secret masking, CSV import, simulator, pay page, inbox</td></tr>
+    <tr><td><code>test/ai.test.js</code></td><td>AI request shape and validation of AI output (mock server)</td></tr>
+  </tbody>
+</table>
+<p>Write a new test with the helper customer:</p>
+<pre><code>import { makeBusiness, customer, bodies } from './helpers.js';
+test('my feature', async () =&gt; {
+  const biz = makeBusiness('grocery');
+  const c = customer(biz);
+  await c.text('hi');
+  const r = await c.tap('ord:start');
+  assert.match(bodies(r), /Pick a category/);
+});</code></pre>
+
+<!-- ============================ PART D ============================ -->
+<section class="part-title"><div class="num">Part D</div><h1>Delivering to clients</h1><p>The repeatable process from "a client said yes" to "live on WhatsApp", what to collect, and where every requirement is configured.</p></section>
+
+<h2>21. New client playbook – step by step</h2>
+<p>Realistic effort: <b>half a day of your work</b> + Meta's approval waiting time (minutes to 2 days). One server serves all clients, so you never install anything new per client.</p>
+<div class="timeline">
+  <div class="ev"><div class="when">Day 0 · Discovery call (30 min)</div>Fill the requirements form (section 22) with the client. Ask for their product Excel or service list, opening hours, payment details, FAQs, logo. Ask them to arrange a <b>dedicated SIM</b> for the bot and their business documents.</div>
+  <div class="ev"><div class="when">Day 0 · Create the business (5 min)</div>Log in as super-admin → <b>All businesses → + New client business</b> → name, business type (preset), owner WhatsApp number, owner email + password, "Add example data" ON. You land in the setup wizard.</div>
+  <div class="ev"><div class="when">Day 1 · Configure (2–3 h)</div>
+    <ol>
+      <li><b>Setup wizard</b>: details, opening hours, payments or booking rules → Finish.</li>
+      <li><b>Products</b> → Import CSV (tick "Replace") <i>or</i> <b>Services &amp; staff</b> → services (duration, price, aftercare, recall days), staff (hours, services), holidays.</li>
+      <li><b>FAQs</b>: replace examples with the client's 5–10 questions; add English + Hindi keywords.</li>
+      <li><b>Settings → Appointments / Enquiry form</b>: triage or lead questions.</li>
+      <li><b>Bot messages</b>: adjust tone and words to the client's style.</li>
+      <li><b>Test the bot</b>: every path (see the test checklist below).</li>
+    </ol></div>
+  <div class="ev"><div class="when">Day 1 · Demo (30 min)</div>Screen-share <b>Test the bot</b>. Let the owner tap through. Note changes; most take minutes in Bot messages / Settings.</div>
+  <div class="ev"><div class="when">Day 1–3 · Connect WhatsApp</div>Add the number in Meta, verify, permanent token, webhook, templates (section 24). Then <b>Settings → WhatsApp</b>: Save → Test connection → Subscribe webhooks. <b>Message templates → Submit all to Meta</b>.</div>
+  <div class="ev"><div class="when">Go-live (30 min)</div>Send "Hi" from your phone to the real number. Ask the owner to send "Hi" too (alerts reach them freely for 24 h; afterwards the <code>owner_alert</code> template is used). Download the QR from Home, print it. Give the owner the User Guide PDF and train them for 20 minutes.</div>
+  <div class="ev"><div class="when">Day 3 and Day 14</div>Read the chats together. Where did customers get stuck? Add FAQs, improve texts. On day 14 share the numbers (orders, bookings, no-shows, reviews) – your case study for the next client.</div>
+</div>
+<h3>Test checklist before showing anyone</h3>
+<div class="grid2">
+<ul class="checklist">
+  <li>"Hi", "hello", "menu" → welcome every time</li>
+  <li>Order: pick category, item, quantity buttons</li>
+  <li>Type "3" instead of tapping</li>
+  <li>Same item twice → quantities add up</li>
+  <li>Checkout as new customer → asks address</li>
+  <li>Checkout again → offers saved address</li>
+  <li>Cash order → confirmation + owner alert</li>
+  <li>UPI order → pay page → Payment received</li>
+  <li>Tap Payment received twice → only one message</li>
+  <li>Switch item out of stock mid-order → removed politely</li>
+</ul>
+<ul class="checklist">
+  <li>Book → triage → day → time → confirm</li>
+  <li>⏩ Fast-forward time → reminder arrives</li>
+  <li>Reschedule and cancel from WhatsApp</li>
+  <li>Visit done with note → aftercare arrives</li>
+  <li>Fast-forward → check-in → 😊 review / 😟 alert</li>
+  <li>FAQ question typed in own words</li>
+  <li>Enquiry form → lead appears + alert</li>
+  <li>Voice note / photo → owner alerted</li>
+  <li>"talk to someone" → bot quiet → reply from Chats</li>
+  <li>Nonsense text, "cancel", "STOP" → no crash</li>
+</ul>
+</div>
+
+<h2>22. Requirements to collect from a client</h2>
+<table>
+  <thead><tr><th>Area</th><th>Ask for</th></tr></thead>
+  <tbody>
+    <tr><td>Business basics</td><td>Exact business name, type, address + Google Maps link, owner name/WhatsApp/email, staff logins, opening hours and breaks, weekly off, holidays, language (English/Hinglish/sample phrases), Google review link.</td></tr>
+    <tr><td>WhatsApp &amp; Meta</td><td>Dedicated number (not on the WhatsApp app), Meta Business account (or create one), business documents (GST / Udyam / shop licence / clinic registration), display name, logo, description, website.</td></tr>
+    <tr><td>Ordering</td><td>Product Excel (name, price, category, unit, description, in stock) – top 50–100 to start; delivery area, fee, free-delivery limit, pickup, minimum order; payment: cash, UPI ID + name, Razorpay keys; delivery time text; special instructions; prescriptions (pharmacy).</td></tr>
+    <tr><td>Appointments</td><td>Services (duration, price, aftercare, repeat interval), staff (name, title, services, own hours, WhatsApp), slot gap, booking window, minimum notice, staff choice, triage questions with options, reminder times, check-in day, existing patient list with last visits.</td></tr>
+    <tr><td>Enquiries</td><td>5–10 FAQs with answers + the words customers use; lead questions (budget, location, requirement…).</td></tr>
+    <tr><td>Operations</td><td>Who answers human requests and when; behaviour when closed; plans for offers (consent); whether AI understanding is wanted.</td></tr>
+  </tbody>
+</table>
+<p class="small muted">A copy-paste version of this form is in <code>docs/CLIENT_ONBOARDING.md</code>.</p>
+
+<h2>23. Client requirement → where to configure it</h2>
+<table>
+  <thead><tr><th>Client says…</th><th>Do this (no code)</th></tr></thead>
+  <tbody>
+    <tr><td>"We only do pickup, no delivery"</td><td>Settings → Ordering: Home delivery OFF, Pickup ON.</td></tr>
+    <tr><td>"Free delivery above ₹500, else ₹30"</td><td>Settings → Ordering: delivery charge 30, free above 500.</td></tr>
+    <tr><td>"No orders below ₹200"</td><td>Settings → Ordering: minimum order 200.</td></tr>
+    <tr><td>"Only cash" / "Add UPI" / "Online payment"</td><td>Settings → Ordering: payment options + UPI ID / Razorpay keys + webhook.</td></tr>
+    <tr><td>"Show photos of products"</td><td>Product photo URL + Settings → Ordering → Show product photos.</td></tr>
+    <tr><td>"Customers should send prescriptions"</td><td>Settings → Ordering → Accept photos / prescriptions.</td></tr>
+    <tr><td>"15-minute slots, book up to 2 weeks ahead"</td><td>Settings → Appointments: gap 15, days ahead 14.</td></tr>
+    <tr><td>"Ask which tooth hurts before booking"</td><td>Settings → Appointments → triage question with buttons.</td></tr>
+    <tr><td>"Remind patients 1 day and 3 hours before"</td><td>Settings → Appointments → reminders 1440 and 180 minutes.</td></tr>
+    <tr><td>"Send cleaning reminder after 6 months"</td><td>Services → recall after 180 days.</td></tr>
+    <tr><td>"Doctor on leave next week"</td><td>Services &amp; staff → Holidays &amp; leave.</td></tr>
+    <tr><td>"Patients shouldn't choose the doctor"</td><td>Settings → Appointments → staff choice OFF.</td></tr>
+    <tr><td>"Ask for Google reviews"</td><td>Settings → Business → review link; Appointments → review request ON.</td></tr>
+    <tr><td>"Speak Hinglish" / "change this sentence"</td><td>Settings → Business → language; Bot messages page.</td></tr>
+    <tr><td>"When closed, don't take orders"</td><td>Settings → Opening hours → "Only collect the message".</td></tr>
+    <tr><td>"Bot should stay quiet longer after staff replies"</td><td>Settings → Features → quiet hours after handoff.</td></tr>
+    <tr><td>"Alerts to my receptionist too"</td><td>Staff WhatsApp number (bookings) or add a Team login.</td></tr>
+    <tr><td>"Send Diwali offer to customers"</td><td>Create a Marketing template in Meta → Broadcasts (opted-in only).</td></tr>
+    <tr><td>"Import my old patients"</td><td>Customers → Import CSV with last_visit + service (schedules recalls).</td></tr>
+    <tr><td>"Understand typed orders"</td><td><code>ANTHROPIC_API_KEY</code> on the server + Settings → AI.</td></tr>
+    <tr><td>"Change the dashboard colour to our brand"</td><td>The only CSS change: <code>--brand</code> in <code>public/app/styles.css</code> (affects all clients on that server).</td></tr>
+  </tbody>
+</table>
+
+<h2>24. Going live with Meta (summary)</h2>
+<ol class="steps">
+  <li><b>developers.facebook.com → Create App</b> (use case "Connect with customers through WhatsApp"), attach to your Meta Business. Once for all clients.</li>
+  <li><b>Permanent token</b>: Business settings → System users → Add (Admin) → Add assets (app + WhatsApp account, full control) → Generate token (never expires) with <code>whatsapp_business_messaging</code> + <code>whatsapp_business_management</code>.</li>
+  <li><b>App secret</b>: App settings → Basic → put in <code>.env</code> as <code>META_APP_SECRET</code>.</li>
+  <li><b>Add the client's number</b>: WhatsApp Manager → Phone numbers → Add → OTP → display name = business name. Add a payment method. Start business verification.</li>
+  <li><b>Dashboard → Settings → WhatsApp</b>: Phone Number ID, WABA ID, token → Save → Test connection → Subscribe webhooks.</li>
+  <li><b>Meta → WhatsApp → Configuration → Webhook</b>: Callback URL <code>https://your-domain/webhook</code> + Verify token (both shown in the dashboard) → Verify and save → Manage fields → subscribe to <b>messages</b>.</li>
+  <li><b>Templates</b>: Message templates → Submit all to Meta → wait for Approved.</li>
+  <li>Send "Hi" from your phone. Fill the WhatsApp profile (logo, description, address, hours).</li>
+</ol>
+<p class="small muted">Full details with screenshots-level steps: <code>docs/META_WHATSAPP_SETUP.md</code>.</p>
+
+<h2>25. Deployment, backups and updates</h2>
+<table>
+  <thead><tr><th>Option</th><th>Summary</th></tr></thead>
+  <tbody>
+    <tr><td>Ubuntu VPS (recommended)</td><td>Node 22 + PM2 (<code>pm2 start ecosystem.config.cjs</code>) + nginx (<code>deploy/nginx.conf</code>) + free HTTPS (certbot). 1 vCPU / 1 GB is enough to start.</td></tr>
+    <tr><td>Docker</td><td><code>docker compose up -d --build</code>; mount <code>./data</code>; put HTTPS in front.</td></tr>
+    <tr><td>Render</td><td>Blueprint from <code>render.yaml</code>; paid instance + 1 GB disk (free instances sleep and Meta webhooks would time out).</td></tr>
+  </tbody>
+</table>
+<div class="grid2">
+  <div class="card"><h4>Backups</h4><p>Daily cron: <code>npm run backup</code> (keeps 14 in <code>data/backups</code>). Copy them off the server (rclone/S3/Drive). Keep <code>.env</code> in a password manager.</p><p><b>Restore</b>: stop the app → replace <code>data/app.db</code> with a backup → delete <code>app.db-wal</code>/<code>app.db-shm</code> → start.</p></div>
+  <div class="card"><h4>Updating the code</h4><pre><code>npm run backup
+git pull
+npm ci --omit=dev
+pm2 restart whatsapp-bot</code></pre><p>New database migrations run automatically on start.</p></div>
+</div>
+<h3>Production checklist</h3>
+<ul class="checklist">
+  <li><code>NODE_ENV=production</code> and an https <code>PUBLIC_URL</code></li>
+  <li><code>META_APP_SECRET</code> set (webhook signatures verified)</li>
+  <li>Strong admin password, changed after first login</li>
+  <li><code>.env</code> / <code>ENCRYPTION_KEY</code> backed up; daily database backups + off-server copy; restore tested once</li>
+  <li>Uptime monitor on <code>https://your-domain/health</code></li>
+  <li>Only one app process per <code>data</code> folder (PM2 <code>instances: 1</code>)</li>
+  <li><code>GRAPH_VERSION</code> matches Meta's API Setup page</li>
+</ul>
+
+<!-- ============================ PART E ============================ -->
+<section class="part-title"><div class="num">Part E</div><h1>"If this happens, do this"</h1><p>A playbook for every situation you are likely to meet – on your computer, with Meta, with the bot, with orders and appointments, with the server, and when clients change their mind.</p></section>
+
+<h2>26. Installation and your computer</h2>
+<table class="t-if">
+  <thead><tr><th>If this happens…</th><th>Why</th><th>Do this</th></tr></thead>
+  <tbody>
+    <tr><td>"Wrong email or password" on login</td><td>The login doesn't exist in this database (e.g. demo never ran) or wrong password.</td><td><code>npm run users</code> to see logins. <code>npm run demo</code> for demo logins. Reset any password: <code>npm run create-admin -- email "NewPass123"</code>.</td></tr>
+    <tr><td>Typed a command inside <code>npm run setup</code></td><td>The wizard treats typing as an answer.</td><td>The wizard now rejects it. If <code>.env</code> is wrong: run setup again, answer <code>y</code> to overwrite.</td></tr>
+    <tr><td><code>node:sqlite</code> / "No such built-in module" / syntax errors</td><td>Node is older than 22.13.</td><td>Install Node 22 or 24 LTS from nodejs.org, reopen the terminal, <code>node -v</code>.</td></tr>
+    <tr><td><code>EADDRINUSE</code> (port 3000 in use)</td><td>Another program (or an old copy of the server) uses the port.</td><td>Close the other terminal, or set <code>PORT=3001</code> in <code>.env</code>.</td></tr>
+    <tr><td>PowerShell: "running scripts is disabled"</td><td>Windows execution policy blocks <code>npm.ps1</code>.</td><td>Run <code>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code> once, or use Command Prompt.</td></tr>
+    <tr><td><code>npm install</code> fails behind office proxy / no internet</td><td>Network.</td><td>Retry on another network; or <code>npm config set proxy …</code>.</td></tr>
+    <tr><td>Dashboard shows a blank page</td><td>Browser cache or a JS error.</td><td>Hard refresh (Ctrl+F5). Open the browser console (F12) and read the red error.</td></tr>
+    <tr><td>No sound for new orders</td><td>Browsers block sound until you interact.</td><td>Click once anywhere on the dashboard after opening it.</td></tr>
+    <tr><td>Changes to <code>.env</code> not applied</td><td><code>.env</code> is read at start.</td><td>Restart the server.</td></tr>
+  </tbody>
+</table>
+
+<h2>27. Meta and WhatsApp connection</h2>
+<table class="t-if">
+  <thead><tr><th>If this happens…</th><th>Why</th><th>Do this</th></tr></thead>
+  <tbody>
+    <tr><td>Webhook "could not be verified"</td><td>URL not https/reachable, or verify token mismatch.</td><td>Open <code>https://your-domain/health</code> from your phone (must show ok). Copy URL + token again from Settings → WhatsApp.</td></tr>
+    <tr><td>Webhook verified but no messages arrive</td><td>"messages" field not subscribed, or app not subscribed to the WABA.</td><td>Meta → Webhook fields → subscribe <b>messages</b>. Dashboard → Settings → WhatsApp → <b>Subscribe webhooks</b>.</td></tr>
+    <tr><td>Logs: "invalid webhook signature" (401)</td><td>Wrong app secret, or a proxy changed the body.</td><td>Copy App secret again into <code>META_APP_SECRET</code> (or per-business field); restart.</td></tr>
+    <tr><td>Logs: "message for unknown phone_number_id"</td><td>The number is not saved on any business, or the business is paused.</td><td>Save the Phone Number ID in Settings → WhatsApp; check Agency page "Active".</td></tr>
+    <tr><td>Test connection: error 190</td><td>Token expired or wrong.</td><td>Create a System User permanent token; paste and Save.</td></tr>
+    <tr><td>Error 131030 in Chats</td><td>Test mode: recipient not in allowed list.</td><td>Add the number in Meta API Setup, or go live with a real number.</td></tr>
+    <tr><td>Error 131047 / status "skipped"</td><td>More than 24 h since the customer's last message, no template.</td><td>Message templates → Submit all to Meta; wait for Approved.</td></tr>
+    <tr><td>Error 132000 / 132001</td><td>Template parameters or name/language don't match.</td><td>Re-create with the one-click button; check name + language on the Templates page.</td></tr>
+    <tr><td>Template rejected</td><td>Wording looks promotional in Utility, or vague.</td><td>Edit wording in WhatsApp Manager (clear, transactional), resubmit, put the approved name on the Templates page.</td></tr>
+    <tr><td>Error 133010</td><td>Number not registered on Cloud API.</td><td>Finish registration in WhatsApp Manager (PIN / registration step).</td></tr>
+    <tr><td>Quality rating drops to yellow/red</td><td>Customers block/report – usually from broadcasts.</td><td>Stop broadcasts, send only to opted-in customers, make messages useful, check templates are relevant.</td></tr>
+    <tr><td>Number restricted / banned</td><td>Policy violation (spam, restricted goods).</td><td>Check WhatsApp Manager notices, appeal; review what was sent; never use unofficial tools.</td></tr>
+    <tr><td>Client's number is still on the WhatsApp app</td><td>A number can't be on the app and the API at the same time.</td><td>Back up chats, delete the WhatsApp account on the phone, then register in Meta. Or use a new SIM (easiest).</td></tr>
+  </tbody>
+</table>
+
+<h2>28. Bot behaviour</h2>
+<table class="t-if">
+  <thead><tr><th>If this happens…</th><th>Why</th><th>Do this</th></tr></thead>
+  <tbody>
+    <tr><td>Bot doesn't answer one customer</td><td>Human handoff active (bot paused for that chat).</td><td>Chats → open chat → <b>Hand back to bot</b>. The customer can also type <code>menu</code>.</td></tr>
+    <tr><td>Bot doesn't answer anybody</td><td>Server down, business paused, token expired, webhook unsubscribed.</td><td><code>/health</code>; Agency page "Active"; Settings → WhatsApp → Test connection; server logs.</td></tr>
+    <tr><td>Bot answers in the wrong language</td><td>Business language or overrides.</td><td>Settings → Business → Bot language; check Bot messages for custom texts.</td></tr>
+    <tr><td>A button label is cut ("…")</td><td>WhatsApp limit: 20 chars (buttons), 24 (list rows).</td><td>Shorten in Bot messages / product or service name.</td></tr>
+    <tr><td>Customer "stuck" in a step</td><td>They typed something unexpected.</td><td>They can type <code>menu</code> or <code>cancel</code>. Improve the step's text in Bot messages to make the expected answer clear.</td></tr>
+    <tr><td>FAQ not matched when typed</td><td>Missing keywords.</td><td>FAQs → add the customer's exact words (incl. Hindi/Hinglish) as keywords.</td></tr>
+    <tr><td>Owner not receiving alerts</td><td>Wrong owner number, alerts off, or 24-h window closed without template.</td><td>Settings → Business owner number with country code; Features → alerts ON; Templates → owner_alert approved; owner sends "Hi" to the bot.</td></tr>
+    <tr><td>Customer sent a voice note / photo</td><td>Not part of a flow.</td><td>Bot acknowledges and alerts the owner; open it in Chats (📎 Open attachment).</td></tr>
+    <tr><td>Customer typed STOP by mistake</td><td>They are opted out of reminders/updates.</td><td>They send START, or Customers → Edit → "Receives reminders &amp; updates" ON.</td></tr>
+    <tr><td>Bot keeps saying "We are closed"</td><td>Wrong hours or time zone.</td><td>Settings → Opening hours; Settings → Business → Time zone.</td></tr>
+  </tbody>
+</table>
+
+<h2>29. Orders and payments</h2>
+<table class="t-if">
+  <thead><tr><th>If this happens…</th><th>Why</th><th>Do this</th></tr></thead>
+  <tbody>
+    <tr><td>Product missing in the bot</td><td>Out of stock, hidden, or category on another page.</td><td>Products → In stock + Visible ON; check "More options" page.</td></tr>
+    <tr><td>Customer paid by UPI, order still "New"</td><td>UPI confirmation is manual.</td><td>Check bank app → Orders → <b>Payment received</b>.</td></tr>
+    <tr><td>Razorpay paid but order not confirmed</td><td>Webhook URL/secret/event wrong.</td><td>Razorpay → Webhooks: URL from Settings → WhatsApp (<code>/webhooks/razorpay/&lt;id&gt;</code>), event <code>payment_link.paid</code>, same secret in Settings → Ordering. Meanwhile tap Payment received.</td></tr>
+    <tr><td>"Pay online" option not shown</td><td>Razorpay key ID/secret missing.</td><td>Settings → Ordering → Razorpay keys.</td></tr>
+    <tr><td>UPI option not shown</td><td>No UPI ID.</td><td>Settings → Ordering → UPI ID.</td></tr>
+    <tr><td>Customer wants to change an order</td><td>No self-edit after placing (by design).</td><td>Cancel it with reason "Please order again with changes", or adjust manually and tell the customer in Chats.</td></tr>
+    <tr><td>Wrong delivery address</td><td>Customer saved an old address.</td><td>Reply in Chats; update Customers → Edit → Address.</td></tr>
+    <tr><td>Prices changed – old carts?</td><td>Carts are re-priced at checkout.</td><td>Nothing to do – customers pay current prices.</td></tr>
+    <tr><td>Refund needed</td><td>Refunds happen in the bank/Razorpay.</td><td>Refund there; cancel the order with a reason. (Refund status automation is in the future scope.)</td></tr>
+  </tbody>
+</table>
+
+<h2>30. Appointments</h2>
+<table class="t-if">
+  <thead><tr><th>If this happens…</th><th>Why</th><th>Do this</th></tr></thead>
+  <tbody>
+    <tr><td>"No slots available"</td><td>Closed day, leave, min notice, booking window, staff doesn't do that service, fully booked.</td><td>Check Opening hours, Holidays &amp; leave, Settings → Appointments (days ahead, notice), Staff → services ticked.</td></tr>
+    <tr><td>Slot times are shifted by hours</td><td>Wrong time zone.</td><td>Settings → Business → Time zone.</td></tr>
+    <tr><td>Reminders not sent</td><td>Scheduler disabled; appointment cancelled; customer opted out; window closed and no approved template.</td><td>Check <code>SCHEDULER_ENABLED</code>; Templates page; Chats for "skipped"; <code>jobs</code> table for FAILED.</td></tr>
+    <tr><td>"Two patients at the same time"</td><td>Different staff members, or one was added as a walk-in on a different staff.</td><td>The system blocks the same staff + time. Check the staff column on Appointments.</td></tr>
+    <tr><td>Patient calls instead of WhatsApp</td><td>–</td><td>Appointments → + New appointment (they still get confirmation and reminders).</td></tr>
+    <tr><td>Doctor suddenly unavailable today</td><td>–</td><td>Add leave for today; for existing bookings tap Move or Cancel (patient notified).</td></tr>
+    <tr><td>Patient didn't come</td><td>–</td><td>Tap No-show (stops follow-ups; counted on Home).</td></tr>
+    <tr><td>Unhappy patient after check-in</td><td>They tapped 😐/😟.</td><td>It's flagged in Chats + owner alert; call them. No review request is sent to them.</td></tr>
+  </tbody>
+</table>
+
+<h2>31. Server and data</h2>
+<table class="t-if">
+  <thead><tr><th>If this happens…</th><th>Why</th><th>Do this</th></tr></thead>
+  <tbody>
+    <tr><td>Server crashed / restarted</td><td>–</td><td>PM2 restarts it. Conversations continue (state is in the database). Meta retries webhooks that failed for a while.</td></tr>
+    <tr><td>"database is locked" in logs</td><td>Two app processes on one data folder.</td><td>Run one process (PM2 <code>instances: 1</code>).</td></tr>
+    <tr><td>Disk full</td><td>Old backups/logs.</td><td>Delete old files in <code>data/backups</code>, rotate PM2 logs (<code>pm2 install pm2-logrotate</code>).</td></tr>
+    <tr><td>Database corrupted / mistake</td><td>–</td><td>Restore the latest backup (section 25).</td></tr>
+    <tr><td>Lost <code>ENCRYPTION_KEY</code></td><td>Tokens can't be decrypted.</td><td>Set a new key; re-enter each business's WhatsApp token and Razorpay secrets. Passwords and data are unaffected.</td></tr>
+    <tr><td>Changed <code>SESSION_SECRET</code></td><td>–</td><td>Everyone is logged out once. Nothing else.</td></tr>
+    <tr><td>Moving to a new server</td><td>–</td><td>Copy <code>.env</code> + <code>data/</code>, install, start, update DNS. Same <code>ENCRYPTION_KEY</code> required.</td></tr>
+    <tr><td>Slow with many clients</td><td>Very high volume.</td><td>Bigger VPS first; then Part G (Postgres, separate scheduler).</td></tr>
+  </tbody>
+</table>
+
+<h2>32. When clients change their mind</h2>
+<table class="t-if">
+  <thead><tr><th>Client wants…</th><th>Consider</th><th>Do this</th></tr></thead>
+  <tbody>
+    <tr><td>To add appointments to their shop</td><td>Modules combine freely.</td><td>Settings → Features → Appointments ON; add services &amp; staff.</td></tr>
+    <tr><td>A second branch</td><td>Separate stock, staff, number.</td><td>Create a second business (own number) – easiest and clean. One-number-many-branches is a future flow (Part G).</td></tr>
+    <tr><td>To change their WhatsApp number</td><td>New Phone Number ID; maybe a new WABA.</td><td>Settings → WhatsApp → new ID → Test → Subscribe; resubmit templates if WABA changed; reprint the QR. Tip: share the short link <code>/q/&lt;slug&gt;</code> on posters – it always redirects to the current number.</td></tr>
+    <tr><td>Their own Meta app</td><td>Per-business app secret supported.</td><td>Their token + app secret in Settings → WhatsApp; point their app's webhook at your server.</td></tr>
+    <tr><td>To pause (not paying / season break)</td><td>Paused businesses get no replies.</td><td>Agency → Pause. Or keep active and set "Only collect the message" when closed.</td></tr>
+    <tr><td>To leave</td><td>Data belongs to them.</td><td>Export orders, appointments, customers, enquiries (CSV), then Agency → Delete (type the slug to confirm).</td></tr>
+    <tr><td>A customer to be deleted (privacy)</td><td>Right to erasure.</td><td>Customers → Edit → Delete data.</td></tr>
+    <tr><td>A feature that doesn't exist</td><td>Check Part G first.</td><td>Most are one new flow, setting or integration (Part F recipes).</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================ PART F ============================ -->
+<section class="part-title"><div class="num">Part F</div><h1>Customising &amp; extending</h1><p>Step-by-step recipes with code for the changes clients ask for most. Follow the order: text → setting → preset → flow → integration.</p></section>
+
+<h2>33. Recipe: add or change bot text</h2>
+<p>Business-specific wording: use the <b>Bot messages</b> page – no code. To add a <b>new</b> sentence for a feature, add a key to the <code>en</code> object (and <code>hinglish</code> if different) in <code>src/engine/texts.js</code>, then use <code>c.t('my_key', { name })</code> in a flow. It appears automatically in the Bot messages editor.</p>
+<pre><code><span class="c">// src/engine/texts.js – inside const en = { … }</span>
+callback_done: 'Thanks{name_sp}! We will call you {when}. 📞',</code></pre>
+<div class="callout note">Keys are grouped in the editor by position: keys placed between <code>choose_category</code> and <code>choose_service</code> show under "Ordering", and so on. New keys at the end appear under "Enquiry".</div>
+
+<h2>34. Recipe: add a new language (e.g. Gujarati)</h2>
+<pre><code><span class="c">// src/engine/texts.js</span>
+const gujarati = {
+  ...en,                                   <span class="c">// anything not translated falls back to English</span>
+  welcome: 'નમસ્તે{name_sp}! 🙏 *{business}* માં આપનું સ્વાગત છે.\nઅમે આપની શું મદદ કરી શકીએ?',
+  menu_order: '🛒 ઓર્ડર કરો',
+  <span class="c">// …translate the rest…</span>
+};
+export const DEFAULT_TEXTS = { en, hinglish, gujarati };
+export const LANGUAGES = { en: 'English', hinglish: 'Hinglish', gujarati: 'Gujarati' };</code></pre>
+<p>Restart. "Gujarati" now appears in Settings → Business → Bot language. Remember WhatsApp button limits (20 characters) also apply to other scripts.</p>
+
+<h2>35. Recipe: add a new setting (e.g. packing charge)</h2>
+<ol class="steps">
+  <li><b>Default</b> in <code>src/services/business.js</code> → <code>DEFAULT_SETTINGS.ordering.packing_fee: 0</code>.</li>
+  <li><b>Use it</b> in <code>src/services/orders.js</code> → <code>totals()</code>:
+<pre><code>const packing = Number(biz.settings.ordering.packing_fee || 0);
+return { subtotal, fee: fee + packing, total: subtotal + fee + packing };</code></pre></li>
+  <li><b>Show it</b> in the dashboard: add to <code>orderingFields</code> in <code>public/app/pages/settings.js</code>:
+<pre><code>{ key: 'settings.ordering.packing_fee', label: 'Packing charge', type: 'money' },</code></pre></li>
+  <li>Add a test in <code>test/ordering.test.js</code>; run <code>npm test</code>.</li>
+</ol>
+
+<h2>36. Recipe: add a new business type (preset)</h2>
+<pre><code><span class="c">// src/presets/index.js – inside PRESETS</span>
+optical: {
+  label: 'Optical store', icon: '👓',
+  description: 'Eye test booking, frame catalogue, order status.',
+  examples: 'Optical store, eye clinic',
+  modules: ['booking', 'ordering', 'enquiry'],
+  settings: { booking: { staff_label: 'Optometrist', slot_interval: 20 } },
+  sample: {
+    services: [{ name: 'Eye test', duration_min: 20, price: 0, recall_days: 365 }],
+    staff: [{ name: 'Optometrist', title: 'Optometrist' }],
+    products: [{ name: 'Blue-cut lenses', category: 'Lenses', price: 150000, unit: 'pair' }],
+    faqs: [{ question: 'Is the eye test free?', answer: 'Yes, free with any purchase.', keywords: 'eye test,free,checkup' }],
+  },
+},</code></pre>
+<p>It appears instantly in the setup wizard and the agency "New client business" form.</p>
+
+<h2>37. Recipe: add a new conversation flow (e.g. "Request a call back")</h2>
+<p><b>1. Create the flow</b> – <code>src/engine/flows/callback.js</code>:</p>
+<pre><code>export const callback = {
+  module: 'callback',            <span class="c">// name used in businesses.modules</span>
+  prefix: 'cb',                  <span class="c">// buttons look like "cb:…"</span>
+  states: ['CB_TOPIC'],          <span class="c">// states where typed text belongs to this flow</span>
+
+  menuItems(c) {
+    return [{ id: 'cb:start', title: c.t('menu_callback'), description: c.t('menu_callback_desc') }];
+  },
+
+  async onChoice(c, [action, arg]) {
+    if (action === 'start') {
+      return c.buttons(c.t('callback_when'), [
+        { id: 'cb:when:morning', title: c.t('callback_morning') },
+        { id: 'cb:when:evening', title: c.t('callback_evening') },
+      ]);
+    }
+    if (action === 'when') {
+      c.setState('CB_TOPIC', { cb: { when: arg } });
+      return c.say(c.t('callback_topic'));
+    }
+    return false;                  <span class="c">// not ours -> router shows the menu</span>
+  },
+
+  async onText(c) {
+    if (c.state !== 'CB_TOPIC') return false;
+    const when = c.ctx.cb?.when;
+    c.reset();
+    await c.notifyOwner(`📞 CALL BACK (${when}) ${c.customer.name || ''} +${c.phone}: ${c.input.text}`);
+    return c.buttons(c.t('callback_done', { when }), [{ id: 'menu', title: c.t('btn_menu') }]);
+  },
+};</code></pre>
+<p><b>2. Register it</b> – <code>src/engine/index.js</code>: <code>import { callback } from './flows/callback.js';</code> and <code>export const FLOWS = [ordering, booking, enquiry, callback];</code></p>
+<p><b>3. Allow the module</b> – <code>src/services/business.js</code>: <code>export const MODULES = ['ordering', 'booking', 'enquiry', 'callback'];</code></p>
+<p><b>4. Texts</b> – add <code>menu_callback</code> (≤ 24 chars), <code>menu_callback_desc</code>, <code>callback_when</code>, <code>callback_morning</code>, <code>callback_evening</code> (≤ 20 chars), <code>callback_topic</code>, <code>callback_done</code> to <code>en</code> in <code>texts.js</code>.</p>
+<p><b>5. Dashboard switch</b> – Settings → Features in <code>public/app/pages/settings.js</code>: <code>${moduleToggle('callback', '📞 Call back requests', 'Customers ask you to call them.')}</code></p>
+<p><b>6. Test</b> – <code>customer(biz).tap('cb:start')</code> in a new test file.</p>
+
+<h2>38. Recipe: schedule something later (e.g. "rate your order")</h2>
+<pre><code><span class="c">// src/services/orders.js – inside setOrderStatus(), after the status update</span>
+if (status === 'DELIVERED') {
+  schedule(biz.id, 'order.feedback', Date.now() + 2 * 3600_000, { id: order.id }, `order:${order.id}`);
+}
+
+<span class="c">// src/services/feedback.js (import it from scheduler.js so the handler registers)</span>
+registerJob('order.feedback', async (job) =&gt; {
+  const biz = getBusiness(job.business_id);
+  const order = getOrder(biz.id, job.payload.id);
+  if (!order || order.status !== 'DELIVERED') return;
+  await send(biz, order.phone, B.buttons(text(biz, 'rate_order', { order_no: order.order_no }), [
+    { id: 'fb:5', title: '😍 Loved it' }, { id: 'fb:3', title: '🙂 OK' }, { id: 'fb:1', title: '😞 Not good' },
+  ]));
+});</code></pre>
+<p>Then handle <code>fb:</code> ids with a small flow (recipe 37). Inside 24 hours this is free-form; later it would need a template slot (add one in <code>src/services/templates.js</code>).</p>
+
+<h2>39. Recipe: another payment gateway (Cashfree, PhonePe, Stripe…)</h2>
+<ol class="steps">
+  <li>In <code>src/services/payments.js</code> add <code>createXLink(biz, order)</code> that calls the gateway and returns a URL; store keys in settings (encrypt secrets like the Razorpay ones in <code>routes/api.js</code> → <code>SECRET_SETTINGS</code>).</li>
+  <li>In <code>flows/ordering.js</code> → <code>placeOrder()</code>, add a branch for the new mode and send <code>c.cta(…)</code> with the link; add the mode to <code>paymentModes()</code> and a button label text.</li>
+  <li>In <code>src/routes/public.js</code> add <code>POST /webhooks/x/:bizId</code>: verify the gateway's signature, de-duplicate via <code>processed_events</code>, then call <code>confirmPayment(biz, orderId, ref)</code> – it is idempotent.</li>
+  <li>Add the option to <code>orderingFields</code> (settings page).</li>
+</ol>
+
+<h2>40. Recipe: send events to Google Sheets, a CRM or Zapier</h2>
+<p>Add a small helper and call it where events happen (order created, booking, lead):</p>
+<pre><code><span class="c">// src/services/integrations.js</span>
+export async function emit(biz, event, data) {
+  const url = biz.settings.integrations?.webhook_url;     <span class="c">// new setting with default ''</span>
+  if (!url) return;
+  fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ event, business: biz.slug, at: new Date().toISOString(), data }),
+    signal: AbortSignal.timeout(10000) }).catch(() =&gt; {});
+}
+<span class="c">// e.g. in orders.js createOrder(): emit(biz, 'order.created', order);</span></code></pre>
+<p>Point the URL at a Google Apps Script web app (append a row), Zapier/Make "Catch hook", or the client's CRM API.</p>
+
+<h2>41. Recipe: branding and small UI changes</h2>
+<ul>
+  <li>Brand colour: <code>--brand</code> and <code>--brand-strong</code> in <code>public/app/styles.css</code> (light and dark blocks).</li>
+  <li>Logo/name in the sidebar: <code>public/app/main.js</code> (<code>.brand</code> block).</li>
+  <li>Pay page look: <code>payPageHtml()</code> in <code>src/services/payments.js</code>.</li>
+  <li>No build step – save the file and refresh the browser.</li>
+</ul>
+
+<!-- ============================ PART G ============================ -->
+<section class="part-title"><div class="num">Part G</div><h1>Future scope by client requirement</h1><p>What you can build next, mapped to what clients will ask for, how to approach it, rough effort and where it goes.</p></section>
+
+<h2>42. Requirement → solution map</h2>
+<p class="small muted">Effort: <span class="badge">S</span> ≈ 1 day · <span class="badge b">M</span> ≈ 2–5 days · <span class="badge w">L</span> ≈ 1–3 weeks.</p>
+<table>
+  <thead><tr><th style="width:24%">Client asks for</th><th>Approach</th><th style="width:7%">Effort</th><th style="width:22%">Where</th></tr></thead>
+  <tbody>
+    <tr><td>Discount codes / offers</td><td>Coupons table; "Apply coupon" step in checkout; the <code>orders.discount</code> column already exists.</td><td><span class="badge b">M</span></td><td>orders.js, ordering flow, new page</td></tr>
+    <tr><td>Daily milk / tiffin / water-can subscriptions</td><td>Subscriptions table (items, days, pause dates); daily job creates orders; "Pause tomorrow" button.</td><td><span class="badge w">L</span></td><td>new flow + job + page</td></tr>
+    <tr><td>Table reservation (cafe/restaurant)</td><td>Works today: turn on Appointments, services "Table for 2/4", staff = tables. A dedicated flow can add party size.</td><td><span class="badge">S</span></td><td>config / booking flow</td></tr>
+    <tr><td>Queue tokens (walk-in clinic, salon)</td><td>"Get token" flow: next number per day, "your turn is near" message when staff taps Next.</td><td><span class="badge b">M</span></td><td>new flow + page</td></tr>
+    <tr><td>Advance payment / deposit for bookings</td><td>Reuse UPI/Razorpay links for appointments; status BOOKED → CONFIRMED on payment.</td><td><span class="badge b">M</span></td><td>appointments.js, payments.js</td></tr>
+    <tr><td>Invoices / GST bills (PDF)</td><td>Generate PDF on delivery, send as WhatsApp document.</td><td><span class="badge b">M</span></td><td>new service + builders.document</td></tr>
+    <tr><td>Loyalty points / referral</td><td>Points ledger per customer; earn on delivered orders; redeem as discount.</td><td><span class="badge b">M</span></td><td>new table + checkout step</td></tr>
+    <tr><td>Product photos in a scrollable catalogue</td><td>Meta Commerce catalogue + multi-product messages; inbound <code>order</code> messages are already handled.</td><td><span class="badge b">M</span></td><td>builders, catalogue sync</td></tr>
+    <tr><td>Forms inside WhatsApp (address, intake)</td><td>WhatsApp Flows; inbound <code>nfm_reply</code> is already normalised to <code>kind: 'form'</code>.</td><td><span class="badge b">M</span></td><td>builders + flow</td></tr>
+    <tr><td>Delivery rider app / live tracking</td><td>Rider login role, "Out for delivery" with assigned rider, location link.</td><td><span class="badge w">L</span></td><td>roles, orders, new page</td></tr>
+    <tr><td>One number, many branches</td><td>"Choose branch" first step; branch_id on orders/appointments; per-branch staff &amp; stock.</td><td><span class="badge w">L</span></td><td>schema + flows</td></tr>
+    <tr><td>Google Calendar sync for doctors</td><td>OAuth per staff; push bookings; read busy times into <code>busy()</code>.</td><td><span class="badge w">L</span></td><td>appointments.js</td></tr>
+    <tr><td>Google Sheets / CRM / Zapier</td><td>Outgoing webhook events (recipe 40).</td><td><span class="badge">S</span></td><td>integrations.js</td></tr>
+    <tr><td>Lab reports / documents to patients</td><td>Upload in dashboard → send as WhatsApp document.</td><td><span class="badge">S</span></td><td>inbox + builders.document</td></tr>
+    <tr><td>Voice notes understood</td><td>Download media → speech-to-text → treat as text.</td><td><span class="badge b">M</span></td><td>engine media branch</td></tr>
+    <tr><td>More languages (Gujarati, Marathi, Tamil…)</td><td>Recipe 34.</td><td><span class="badge">S</span></td><td>texts.js</td></tr>
+    <tr><td>Smarter AI assistant</td><td>Claude with tools (search catalogue, check slots, create booking) behind the same validation.</td><td><span class="badge w">L</span></td><td>ai.js + engine</td></tr>
+    <tr><td>Reports (monthly sales, repeat rate, no-show rate)</td><td>SQL reports page + CSV/PDF export.</td><td><span class="badge b">M</span></td><td>api.js + page</td></tr>
+    <tr><td>Email / SMS alerts too</td><td>Add channels to <code>notify.js</code> (SMTP / SMS provider).</td><td><span class="badge">S</span></td><td>notify.js</td></tr>
+    <tr><td>Two-factor login, per-user permissions</td><td>TOTP on login; permission list per role.</td><td><span class="badge b">M</span></td><td>middleware, users</td></tr>
+  </tbody>
+</table>
+
+<h2>43. Roadmap to a self-serve SaaS</h2>
+<div class="timeline">
+  <div class="ev"><div class="when">Stage 1 – Agency (today)</div>You onboard clients manually on one server. Good to ~100s of businesses.</div>
+  <div class="ev"><div class="when">Stage 2 – Self-serve onboarding</div>Become a Meta Tech Provider; add <b>Embedded Signup</b> so clients connect their own number from a Facebook pop-up (store the returned token per business – already supported). Public sign-up page creates business + owner.</div>
+  <div class="ev"><div class="when">Stage 3 – Billing</div>Plans and subscriptions (Razorpay Subscriptions / Stripe), usage limits per plan (messages, businesses), auto-pause on non-payment.</div>
+  <div class="ev"><div class="when">Stage 4 – Scale</div>Move SQLite → PostgreSQL (replace <code>src/db/index.js</code> with a <code>pg</code> pool and add <code>await</code> at call sites), run the scheduler as its own process, add a queue (Redis/BullMQ) behind the per-customer queue, run several web servers behind a load balancer.</div>
+  <div class="ev"><div class="when">Stage 5 – Marketplace</div>Templates library per industry, app integrations, white-label for resellers (brand per agency).</div>
+</div>
+
+<!-- ============================ APPENDIX ============================ -->
+<section class="part-title"><div class="num">Appendix</div><h1>Reference</h1><p>Error codes, glossary and where to find the other guides.</p></section>
+
+<h2>44. WhatsApp error codes</h2>
+<table>
+  <thead><tr><th style="width:14%">Code</th><th>Meaning</th><th>Fix</th></tr></thead>
+  <tbody>
+    <tr><td>190</td><td>Token expired / invalid</td><td>System User permanent token</td></tr>
+    <tr><td>100</td><td>Invalid parameter</td><td>Check Phone Number ID / message format</td></tr>
+    <tr><td>131030</td><td>Recipient not allowed (test mode)</td><td>Add test recipient or go live</td></tr>
+    <tr><td>131047</td><td>Outside 24-hour window</td><td>Approved template</td></tr>
+    <tr><td>131026</td><td>Undeliverable</td><td>Number format / not on WhatsApp / blocked</td></tr>
+    <tr><td>131051</td><td>Unsupported message type</td><td>Use builders</td></tr>
+    <tr><td>132000 / 132001</td><td>Template params / name / language mismatch</td><td>Recreate template; check Templates page</td></tr>
+    <tr><td>132015</td><td>Template paused (low quality)</td><td>Improve wording; reduce sends</td></tr>
+    <tr><td>133010</td><td>Number not registered</td><td>Register in WhatsApp Manager</td></tr>
+    <tr><td>130429 / 131056</td><td>Rate limits</td><td>Slow down; fewer messages per person</td></tr>
+    <tr><td>368</td><td>Policy restriction</td><td>Check WhatsApp Manager notices</td></tr>
+  </tbody>
+</table>
+
+<h2>45. Glossary of project terms</h2>
+<table class="t-narrow">
+  <tbody>
+    <tr><td>Business</td><td>One client (tenant) with its own number, data and logins.</td></tr>
+    <tr><td>Module</td><td>Ordering, booking or enquiry – switched on per business.</td></tr>
+    <tr><td>Preset</td><td>Ready configuration for a business type (12 included).</td></tr>
+    <tr><td>Flow</td><td>The code of one conversation type (<code>src/engine/flows</code>).</td></tr>
+    <tr><td>State</td><td>Where a customer is in a flow (e.g. <code>ORD_CART</code>), saved in <code>sessions</code>.</td></tr>
+    <tr><td>Handoff</td><td>Bot paused for one chat so a human can reply.</td></tr>
+    <tr><td>Template slot</td><td>One of five business-initiated message types linked to an approved Meta template.</td></tr>
+    <tr><td>Job</td><td>A scheduled task in the <code>jobs</code> table (reminder, check-in, recall, broadcast).</td></tr>
+    <tr><td>Simulator</td><td>"Test the bot" page; phone numbers starting with <code>sim</code> are never sent to WhatsApp.</td></tr>
+    <tr><td>Dry run</td><td>Message recorded but not sent because the business isn't connected yet.</td></tr>
+    <tr><td>Minor units (paise)</td><td>How money is stored: ₹1 = 100.</td></tr>
+  </tbody>
+</table>
+
+<h2>46. Other documents in the repository</h2>
+<table class="t-narrow">
+  <tbody>
+    <tr><td><code>docs/User-Guide.pdf</code></td><td>For business owners and staff – every screen, industry playbooks (clinic, mart, cafe…), daily routine.</td></tr>
+    <tr><td><code>docs/DEVELOPER_GUIDE.md</code></td><td>Markdown version of the technical reference.</td></tr>
+    <tr><td><code>docs/CLIENT_ONBOARDING.md</code></td><td>Copy-paste requirements form and delivery checklist.</td></tr>
+    <tr><td><code>docs/META_WHATSAPP_SETUP.md</code></td><td>Detailed Meta setup and templates.</td></tr>
+    <tr><td><code>docs/DEPLOYMENT.md</code></td><td>VPS, Docker, Render step by step.</td></tr>
+    <tr><td><code>docs/USE_CASES.md</code></td><td>100 business types mapped to presets and settings.</td></tr>
+  </tbody>
+</table>
+
+</main>
+</body>
+</html>
