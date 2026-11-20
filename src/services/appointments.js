@@ -3,7 +3,7 @@
 import { all, get, run, insert, tx, parseJson, now } from '../db/index.js';
 import { zonedToUtc, todayIn, addDays, weekdayOf, hmToMin, minToHm, fmtDate, fmtTime, dayLabel, tzParts } from '../lib/time.js';
 import { money } from '../lib/util.js';
-import { text } from '../engine/texts.js';
+import { text, textFor } from '../engine/texts.js';
 import * as B from '../whatsapp/builders.js';
 import { send } from '../whatsapp/sender.js';
 import { notifyOwner, notifyPhone } from './notify.js';
@@ -12,6 +12,13 @@ import { slotTemplate } from './templates.js';
 import { getCustomer, firstName, ensureCustomer, addTags } from './customers.js';
 import { getBusiness } from './business.js';
 import { loadSession, saveSession } from '../engine/session.js';
+import { emit } from './integrations.js';
+
+/** Send an appointment event to the business's integrations (Sheets, CRM, webhooks). */
+export function apptEvent(biz, appt, event = 'appointment.updated') {
+  const a = appt.service_name !== undefined ? appt : getAppointment(biz.id, appt.id);
+  emit(biz, event, { ...apptVars(biz, a), status: a.status, intake: a.intake, phone: a.phone, name: a.customer_name, id: a.id, start_at: a.start_at });
+}
 
 const ACTIVE = `('BOOKED','CONFIRMED')`;
 export const APPT_STATUSES = ['BOOKED', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
@@ -151,6 +158,7 @@ export function book(biz, { phone, name, serviceId, staffId = null, start, intak
   addTags(customer.id, [service.category || service.name]);
   const appt = getAppointment(biz.id, id);
   scheduleReminders(biz, appt);
+  apptEvent(biz, appt, 'appointment.booked');
   return appt;
 }
 
@@ -181,9 +189,10 @@ export async function cancelAppointment(biz, id, { by = 'customer', reason = '' 
   if (!a || !['BOOKED', 'CONFIRMED'].includes(a.status)) return false;
   run(`UPDATE appointments SET status = 'CANCELLED', updated_at = ? WHERE id = ?`, now(), a.id);
   cancelJobs(`appt:${a.id}`);
+  apptEvent(biz, getAppointment(biz.id, a.id));
   const v = apptVars(biz, a);
   if (by === 'business') {
-    await send(biz, a.phone, B.text(text(biz, 'appt_cancelled_by_business', { ...v, reason: reason ? ` ${reason}` : '' })));
+    await send(biz, a.phone, B.text(textFor(biz, a.phone, 'appt_cancelled_by_business', { ...v, reason: reason ? ` ${reason}` : '' })));
   } else {
     await notifyOwner(biz, text(biz, 'owner_cancelled_booking', v));
   }
@@ -209,7 +218,8 @@ export async function rescheduleAppointment(biz, id, start, { staffId, by = 'bus
   }
   const updated = getAppointment(biz.id, a.id);
   scheduleReminders(biz, updated);
-  if (by === 'business') await send(biz, a.phone, B.text(text(biz, 'appt_moved', apptVars(biz, updated))));
+  apptEvent(biz, updated);
+  if (by === 'business') await send(biz, a.phone, B.text(textFor(biz, a.phone, 'appt_moved', apptVars(biz, updated))));
   return updated;
 }
 
@@ -217,7 +227,9 @@ export function setApptStatus(biz, id, status) {
   if (!APPT_STATUSES.includes(status)) throw new Error('invalid status');
   run('UPDATE appointments SET status = ?, updated_at = ? WHERE business_id = ? AND id = ?', status, now(), biz.id, Number(id));
   if (['NO_SHOW', 'CANCELLED'].includes(status)) cancelJobs(`appt:${id}`);
-  return getAppointment(biz.id, id);
+  const appt = getAppointment(biz.id, id);
+  if (appt) apptEvent(biz, appt);
+  return appt;
 }
 
 /** Visit done: send aftercare, schedule check-in and recall. */
@@ -230,11 +242,13 @@ export async function completeAppointment(biz, id, { note = '' } = {}) {
   run('UPDATE customers SET last_visit_at = ? WHERE business_id = ? AND phone = ?', now(), biz.id, a.phone);
   const service = getService(biz.id, a.service_id);
   const care = [service?.aftercare, note].filter(Boolean).join('\n\n');
-  if (care) await send(biz, a.phone, B.text(text(biz, 'aftercare', { ...apptVars(biz, a), aftercare: care })));
+  if (care) await send(biz, a.phone, B.text(textFor(biz, a.phone, 'aftercare', { ...apptVars(biz, a), aftercare: care })));
   const cfg = biz.settings.booking;
   if (Number(cfg.checkin_days) > 0) schedule(biz.id, 'appt.checkin', Date.now() + cfg.checkin_days * 86400_000, { id: a.id }, `appt:${a.id}`);
   if (service?.recall_days > 0) schedule(biz.id, 'appt.recall', Date.parse(a.start_at) + service.recall_days * 86400_000, { id: a.id }, `recall:${a.phone}:${service.id}`);
-  return getAppointment(biz.id, a.id);
+  const done = getAppointment(biz.id, a.id);
+  apptEvent(biz, done);
+  return done;
 }
 
 /** Auto-complete visits N hours after they end (if enabled), so follow-ups run without staff clicks. */
@@ -259,12 +273,12 @@ registerJob('appt.reminder', async (job) => {
   const mins = Number(job.payload.minutes_before);
   const today = todayIn(biz.timezone);
   const apptDay = tzParts(a.start_at, biz.timezone).ymd;
-  const when = mins <= 180 ? text(biz, 'when_in_hours', { hours: Math.max(1, Math.round(mins / 60)) })
-    : apptDay === today ? text(biz, 'when_today') : apptDay === addDays(today, 1) ? text(biz, 'when_tomorrow') : text(biz, 'when_on');
-  const msg = B.buttons(text(biz, 'reminder', { ...v, when }), [
-    { id: `bk:ok:${a.id}`, title: text(biz, 'btn_rem_confirm') },
-    { id: `bk:rs:${a.id}`, title: text(biz, 'btn_reschedule') },
-    { id: `bk:cx:${a.id}`, title: text(biz, 'btn_cancel_appt') },
+  const when = mins <= 180 ? textFor(biz, a.phone, 'when_in_hours', { hours: Math.max(1, Math.round(mins / 60)) })
+    : apptDay === today ? textFor(biz, a.phone, 'when_today') : apptDay === addDays(today, 1) ? textFor(biz, a.phone, 'when_tomorrow') : textFor(biz, a.phone, 'when_on');
+  const msg = B.buttons(textFor(biz, a.phone, 'reminder', { ...v, when }), [
+    { id: `bk:ok:${a.id}`, title: textFor(biz, a.phone, 'btn_rem_confirm') },
+    { id: `bk:rs:${a.id}`, title: textFor(biz, a.phone, 'btn_reschedule') },
+    { id: `bk:cx:${a.id}`, title: textFor(biz, a.phone, 'btn_cancel_appt') },
   ]);
   await send(biz, a.phone, msg, {
     fallbackTemplate: slotTemplate(biz, 'appointment_reminder', [firstName(v.name) || 'there', v.service, v.date, v.time], [`bk:ok:${a.id}`, `bk:rs:${a.id}`]),
@@ -276,10 +290,10 @@ registerJob('appt.checkin', async (job) => {
   const a = biz && getAppointment(biz.id, job.payload.id);
   if (!a || a.status !== 'COMPLETED' || !canMessage(biz, a.phone)) return;
   const v = apptVars(biz, a);
-  const msg = B.buttons(text(biz, 'checkin', v), [
-    { id: `bk:ci:good:${a.id}`, title: text(biz, 'btn_ci_good') },
-    { id: `bk:ci:same:${a.id}`, title: text(biz, 'btn_ci_same') },
-    { id: `bk:ci:bad:${a.id}`, title: text(biz, 'btn_ci_bad') },
+  const msg = B.buttons(textFor(biz, a.phone, 'checkin', v), [
+    { id: `bk:ci:good:${a.id}`, title: textFor(biz, a.phone, 'btn_ci_good') },
+    { id: `bk:ci:same:${a.id}`, title: textFor(biz, a.phone, 'btn_ci_same') },
+    { id: `bk:ci:bad:${a.id}`, title: textFor(biz, a.phone, 'btn_ci_bad') },
   ]);
   await send(biz, a.phone, msg, {
     fallbackTemplate: slotTemplate(biz, 'appointment_checkin', [firstName(v.name) || 'there', v.service], [`bk:ci:good:${a.id}`, `bk:ci:same:${a.id}`, `bk:ci:bad:${a.id}`]),
@@ -298,7 +312,7 @@ registerJob('appt.recall', async (job) => {
   const session = loadSession(biz.id, a.phone);
   session.ctx.recallService = a.service_id;
   saveSession(session);
-  await send(biz, a.phone, B.buttons(text(biz, 'recall', v), [{ id: `bk:svc:${a.service_id}`, title: text(biz, 'btn_book_now') }]), {
+  await send(biz, a.phone, B.buttons(textFor(biz, a.phone, 'recall', v), [{ id: `bk:svc:${a.service_id}`, title: textFor(biz, a.phone, 'btn_book_now') }]), {
     fallbackTemplate: slotTemplate(biz, 'appointment_recall', [firstName(v.name) || 'there', v.service, biz.name], [`bk:svc:${a.service_id}`]),
   });
 });
@@ -315,7 +329,7 @@ registerJob('service.recall', async (job) => {
   const c = getCustomer(biz.id, phone);
   const n = firstName(c?.name);
   const v = { service: service.name, name_sp: n ? ` ${n}` : '' };
-  await send(biz, phone, B.buttons(text(biz, 'recall', v), [{ id: `bk:svc:${service.id}`, title: text(biz, 'btn_book_now') }]), {
+  await send(biz, phone, B.buttons(textFor(biz, phone, 'recall', v), [{ id: `bk:svc:${service.id}`, title: textFor(biz, phone, 'btn_book_now') }]), {
     fallbackTemplate: slotTemplate(biz, 'appointment_recall', [n || 'there', service.name, biz.name], [`bk:svc:${service.id}`]),
   });
 });

@@ -16,6 +16,9 @@ export class Conversation {
     this.phone = session.phone;
   }
 
+  /** Customer's chosen language (falls back to the business language inside text()). */
+  get lang() { return this.customer?.language || null; }
+
   get state() { return this.session.state; }
   get ctx() { return this.session.ctx; }
   get cart() { return this.session.cart; }
@@ -24,7 +27,7 @@ export class Conversation {
   /** Text lookup with common variables pre-filled. */
   t(key, vars = {}) {
     const n = firstName(this.customer?.name);
-    return text(this.biz, key, { name_sp: n ? ` ${n}` : '', name: n, ...vars });
+    return text(this.biz, key, { name_sp: n ? ` ${n}` : '', name: n, ...vars }, this.lang);
   }
 
   setState(state, ctxPatch = {}) {

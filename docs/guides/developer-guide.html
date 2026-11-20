@@ -14,7 +14,7 @@
       <div class="kicker">WhatsApp Automation Kit · Developer Guide</div>
       <h1>From zero to delivering clients</h1>
       <div class="sub">How the code works, how to run it, how to set up every new client, what to do when something goes wrong, and how to grow it for future requirements.</div>
-      <div class="pillrow"><span class="pill">Ordering</span><span class="pill">Appointments</span><span class="pill">Enquiries</span><span class="pill">Reminders &amp; follow-ups</span><span class="pill">Payments</span><span class="pill">Multi-client</span><span class="pill">Optional AI</span></div>
+      <div class="pillrow"><span class="pill">Ordering</span><span class="pill">Appointments</span><span class="pill">Enquiries</span><span class="pill">Reminders &amp; follow-ups</span><span class="pill">Payments</span><span class="pill">Multi-client</span><span class="pill">AI + knowledge base (RAG)</span><span class="pill">Hindi · Gujarati</span><span class="pill">Sheets / CRM sync</span></div>
     </div>
   </div>
   <div class="meta">
@@ -75,7 +75,10 @@
     <tr><td>🛒 Ordering</td><td>Categories → items (or type to search) → quantity → cart → delivery or pickup → address or 📍 location → notes → payment (Cash, UPI page with QR, Razorpay link) → confirmation → status updates. Also "My orders", one-tap reorder, cart reminder, prescription photos, native WhatsApp-catalogue orders.</td></tr>
     <tr><td>📅 Booking</td><td>Service → staff or "any available" → triage questions → day → time → name → confirm → reminders (1 day + 2 hours) with Confirm / Reschedule / Cancel → aftercare after the visit → "how are you feeling?" check-in → review request (happy) or team alert (unhappy) → recall when the next visit is due.</td></tr>
     <tr><td>❓ Enquiry</td><td>FAQ list + automatic answers when customers type a question; a lead form that asks the business's own questions and alerts the owner.</td></tr>
-    <tr><td>Always on</td><td>"Talk to us" human handoff (bot pauses), STOP/START, closed-hours message, photo/voice-note handling, English + Hinglish.</td></tr>
+    <tr><td>🤖 AI assistant</td><td>Answers any question from the business's own documents, website pages, catalogue and FAQs (RAG), in the customer's language; understands typed orders and booking requests.</td></tr>
+    <tr><td>🧩 Menu &amp; quick replies</td><td>Owner-made menu buttons and keyword replies: text, link, image, PDF, location, or jump into a flow.</td></tr>
+    <tr><td>🔌 Integrations</td><td>Every lead, order, booking, handoff and feedback → Google Sheets, HubSpot, Airtable, n8n / Make / Zapier.</td></tr>
+    <tr><td>Always on</td><td>"Talk to us" human handoff (bot pauses), STOP/START, closed-hours message, photo/voice-note handling, English + Hinglish + Hindi + Gujarati with per-customer language choice, same number as the phone app (coexistence).</td></tr>
   </tbody>
 </table>
 
@@ -116,9 +119,9 @@
     <tr><td>Database</td><td><b>SQLite</b> via <code>node:sqlite</code> (WAL mode). One file (<code>data/app.db</code>), zero setup, nothing to compile – it installs on Windows, Mac and Linux identically. Handles hundreds of businesses on one small server.</td></tr>
     <tr><td>Dashboard</td><td><b>Preact + htm</b> loaded through an import map. No bundler, no build step – edit a file and refresh.</td></tr>
     <tr><td>Security</td><td>Node <code>crypto</code>: scrypt passwords, AES-256-GCM for stored tokens, HMAC-signed sessions and webhook checks.</td></tr>
-    <tr><td>Payments</td><td>UPI deep-link page with QR (free), Razorpay Payment Links (automatic confirmation).</td></tr>
-    <tr><td>AI (optional)</td><td>Anthropic Claude via <code>@anthropic-ai/sdk</code> with structured outputs; code validates every AI answer.</td></tr>
-    <tr><td>Dependencies</td><td>Only 6: <code>express</code>, <code>qrcode</code>, <code>preact</code>, <code>htm</code>, <code>@anthropic-ai/sdk</code>, <code>zod</code>.</td></tr>
+    <tr><td>Payments</td><td>UPI deep-link page with QR (free), Razorpay Payment Links and Stripe Checkout (automatic confirmation), any payment link (PayPal.me…).</td></tr>
+    <tr><td>AI (optional)</td><td>Anthropic Claude via <code>@anthropic-ai/sdk</code>: structured outputs, prompt caching; knowledge search with SQLite FTS5; PDF text with <code>unpdf</code>. Code validates every AI answer.</td></tr>
+    <tr><td>Dependencies</td><td>Only 7: <code>express</code>, <code>qrcode</code>, <code>preact</code>, <code>htm</code>, <code>@anthropic-ai/sdk</code>, <code>zod</code>, <code>unpdf</code>.</td></tr>
   </tbody>
 </table>
 
@@ -165,7 +168,8 @@ cd WhatsAPPautomation</code></pre></li>
     <tr><td><code>npm run users</code></td><td>Lists every login, its role and business, and which database file is used.</td></tr>
     <tr><td><code>npm run create-admin -- email "password"</code></td><td>Creates a super-admin, or <b>resets the password</b> of any existing login.</td></tr>
     <tr><td><code>npm run backup</code></td><td>Safe online copy of the database into <code>data/backups/</code> (keeps the newest 14).</td></tr>
-    <tr><td><code>npm test</code></td><td>Runs all 24 automated tests (no internet needed).</td></tr>
+    <tr><td><code>npm test</code></td><td>Runs all 37 automated tests (no internet needed).</td></tr>
+    <tr><td><code>node docs/fiverr/src/build.cjs</code></td><td>Rebuilds the Fiverr gig gallery images (needs Playwright).</td></tr>
     <tr><td><code>node docs/guides/build-pdf.cjs</code></td><td>Rebuilds these PDF guides from <code>docs/guides/*.html</code> (needs Playwright).</td></tr>
   </tbody>
 </table>
@@ -267,6 +271,8 @@ cd WhatsAPPautomation</code></pre></li>
     <tr><td><code>src/engine/flows/ordering.js</code></td><td>Ordering conversation.</td><td>Changing the ordering journey.</td></tr>
     <tr><td><code>src/engine/flows/booking.js</code></td><td>Booking conversation incl. reminders, reschedule, check-in replies.</td><td>Changing the booking journey.</td></tr>
     <tr><td><code>src/engine/flows/enquiry.js</code></td><td>FAQs and lead form; keyword matching.</td><td>Changing FAQ matching / lead logic.</td></tr>
+    <tr><td><code>src/engine/flows/custom.js</code></td><td>Owner-made menu buttons and keyword quick replies (text, link, image, PDF, location, flow).</td><td>New reply types.</td></tr>
+    <tr><td><code>src/engine/texts-indic.js</code></td><td>Hindi and Gujarati language packs.</td><td>Correcting translations.</td></tr>
     <tr><td><code>src/services/business.js</code></td><td>Loads a business (cached), <b><code>DEFAULT_SETTINGS</code></b>, credentials, wa.me link.</td><td><b>Adding any new setting</b> (with a default).</td></tr>
     <tr><td><code>src/services/setup.js</code></td><td>Create businesses/users, apply presets, first super-admin.</td><td>Changing onboarding defaults.</td></tr>
     <tr><td><code>src/services/orders.js</code></td><td>Totals, delivery fee, create order (order numbers), idempotent payment confirmation, status changes + customer messages.</td><td>Discounts, taxes, new statuses.</td></tr>
@@ -277,10 +283,12 @@ cd WhatsAPPautomation</code></pre></li>
     <tr><td><code>src/services/notify.js</code></td><td>WhatsApp alerts to owner/staff (template fallback).</td><td>Adding email/SMS alerts.</td></tr>
     <tr><td><code>src/services/jobs.js</code>, <code>scheduler.js</code></td><td>Durable job queue and the background loop (cart nudges, auto-complete, cleanup).</td><td>New scheduled behaviour.</td></tr>
     <tr><td><code>src/services/broadcasts.js</code></td><td>Template campaigns in throttled batches.</td><td>Campaign features.</td></tr>
-    <tr><td><code>src/services/ai.js</code></td><td>Optional Claude: typed orders → items; questions → answers from FAQs.</td><td>AI behaviour.</td></tr>
+    <tr><td><code>src/services/ai.js</code></td><td>Optional Claude brain: <code>understand()</code> → question / order / booking / human, with cached business prompt, chat memory and knowledge.</td><td>AI behaviour and prompt rules.</td></tr>
+    <tr><td><code>src/services/knowledge.js</code></td><td>Knowledge base: chunking, PDF / file / website import (SSRF-safe), FTS5 search, full vs search mode.</td><td>Retrieval tuning, new file types.</td></tr>
+    <tr><td><code>src/services/integrations.js</code></td><td>Events → signed webhook, Google Sheets, HubSpot, Airtable; retries and delivery log; Apps Script.</td><td>New integration targets.</td></tr>
     <tr><td><code>src/presets/index.js</code></td><td>12 business types: modules, settings, sample products/services/staff/FAQs.</td><td>Adding a business type.</td></tr>
     <tr><td><code>src/routes/webhook.js</code></td><td>Meta webhook (verify, signature, de-dup, per-customer queue).</td><td>Rarely.</td></tr>
-    <tr><td><code>src/routes/public.js</code></td><td><code>/health</code>, <code>/pay/:token</code>, Razorpay webhook, <code>/q/:slug</code> short link + QR image.</td><td>New public page / integration webhook.</td></tr>
+    <tr><td><code>src/routes/public.js</code></td><td><code>/health</code>, <code>/pay/:token</code>, <code>/paid/:token</code>, Razorpay + Stripe webhooks, <code>/q/:slug</code> short link + QR image.</td><td>New public page / integration webhook.</td></tr>
     <tr><td><code>src/routes/middleware.js</code></td><td>Login cookie, CSRF header, business scoping, roles, rate limit, audit log.</td><td>Auth changes.</td></tr>
     <tr><td><code>src/routes/api.js</code></td><td>All dashboard endpoints (section 19).</td><td>New dashboard feature.</td></tr>
   </tbody>
@@ -293,7 +301,7 @@ cd WhatsAPPautomation</code></pre></li>
     <tr><td><code>public/app/main.js</code></td><td>Login screen, app shell (sidebar adapts to enabled modules), business switcher for super-admins, live alerts, hash router (<code>ROUTES</code>).</td></tr>
     <tr><td><code>public/app/lib.js</code></td><td><code>api()</code>, <code>useApi()</code> hook, toasts, money/date formatting, beep.</td></tr>
     <tr><td><code>public/app/ui.js</code></td><td>Reusable components: Page, Card, Badge, Button, Modal, Tabs, schema-driven <code>FormFields</code>, <code>HoursEditor</code>, <code>QuestionsEditor</code>, generic <code>ResourceManager</code> (list + add/edit/delete).</td></tr>
-    <tr><td><code>public/app/pages/*.js</code></td><td>One file per screen: overview, orders, appointments, inbox, customers, leads, catalogue, services, faqs, botmessages, simulator, broadcasts, templates, settings, wizard, agency, help.</td></tr>
+    <tr><td><code>public/app/pages/*.js</code></td><td>One file per screen: overview, orders, appointments, inbox, customers, leads, catalogue, services, faqs, ai (AI assistant + knowledge), quickreplies (menu), integrations, botmessages, simulator, broadcasts, templates, settings, wizard, agency, help.</td></tr>
     <tr><td><code>public/app/styles.css</code></td><td>All styles, light + dark themes via CSS variables (<code>--brand</code> = brand colour).</td></tr>
   </tbody>
 </table>
@@ -314,7 +322,10 @@ cd WhatsAPPautomation</code></pre></li>
     <tr><td><code>faqs</code>, <code>leads</code></td><td>Enquiry module</td><td><code>keywords</code>; <code>answers</code>, <code>status</code></td></tr>
     <tr><td><code>messages</code></td><td>Every message in and out</td><td><code>body</code> (readable), <code>payload</code> (raw), <code>status</code> (sent/delivered/read/failed/skipped/simulated/dry_run), <code>error</code></td></tr>
     <tr><td><code>jobs</code></td><td>Scheduled work</td><td><code>type</code>, <code>run_at</code>, <code>payload</code>, <code>ref</code> (e.g. <code>appt:12</code>), <code>status</code>, <code>attempts</code></td></tr>
-    <tr><td><code>broadcasts</code>, <code>processed_events</code>, <code>audit_log</code></td><td>Campaigns, de-duplication, who-did-what</td><td></td></tr>
+    <tr><td><code>kb_sources</code>, <code>kb_chunks</code>, <code>kb_fts</code></td><td>Knowledge base</td><td>Full text per source; ~900-char chunks; FTS5 index (BM25, Unicode) synced by triggers</td></tr>
+    <tr><td><code>quick_replies</code></td><td>Custom menu buttons / keyword replies</td><td><code>reply_type</code>, <code>body</code>, <code>url</code>, <code>latitude/longitude</code>, <code>flow_target</code>, <code>show_in_menu</code></td></tr>
+    <tr><td><code>integration_log</code></td><td>Every delivery attempt</td><td><code>target</code>, <code>event</code>, <code>status</code>, <code>error</code></td></tr>
+    <tr><td><code>broadcasts</code>, <code>processed_events</code>, <code>audit_log</code></td><td>Campaigns, de-duplication, who-did-what</td><td><code>customers.language</code> (added in migration 002) stores each customer's chosen language</td></tr>
   </tbody>
 </table>
 <div class="callout tip"><span class="t">Settings never need a migration</span>Business settings are one JSON column. When you read a business, the stored JSON is merged over <code>DEFAULT_SETTINGS</code> (in <code>src/services/business.js</code>). Add a new setting with a default there and every existing business gets it automatically.</div>
@@ -335,14 +346,14 @@ cd WhatsAPPautomation</code></pre></li>
 </table>
 <h3>Routing order (first match wins)</h3>
 <ol class="steps">
-  <li><b>STOP / unsubscribe</b> → customer opted out (policy). <b>START</b> → opted back in.</li>
+  <li><b>STOP / unsubscribe</b> → customer opted out (policy). <b>START</b> → opted back in. <b>Language</b> buttons/keyword → customer language saved.</li>
   <li><b>Bot paused</b> (a human is handling the chat) → stay silent and flag "needs reply" – unless the customer types <code>menu</code>.</li>
   <li><b>Global words</b>: hi, hello, namaste, menu, help… → main menu. human, agent, talk to someone → handoff. cancel, back → cancel the current step.</li>
   <li><b>Closed hours</b> with "only collect messages" setting → reply once per day and flag for the team.</li>
   <li><b>Button/list replies</b> → the flow that owns the id prefix (<code>ord:</code>, <code>bk:</code>, <code>enq:</code>).</li>
   <li><b>Catalogue order</b> → ordering.</li>
   <li><b>Text / location / photo during a step</b> → the flow that owns the current state.</li>
-  <li><b>Free text at the menu</b> → FAQ keywords → product search (or AI order understanding) → AI answer (if enabled).</li>
+  <li><b>Free text at the menu</b> → owner quick-reply keywords → FAQ keywords → <b>AI brain</b> (answer / typed order / booking / handoff) → product search.</li>
   <li><b>Nothing matched</b> → polite main menu. The bot is never silent and never stuck.</li>
 </ol>
 <h3>Button IDs are the contract</h3>
@@ -358,6 +369,7 @@ cd WhatsAPPautomation</code></pre></li>
     <tr><td><code>bk:yes</code>, <code>bk:chg</code>, <code>bk:ok:17</code>, <code>bk:rs:17</code>, <code>bk:cx:17</code></td><td>Confirm, change time, reminder confirm / reschedule / cancel appointment 17</td></tr>
     <tr><td><code>bk:ci:good:17</code></td><td>Check-in answer for appointment 17</td></tr>
     <tr><td><code>enq:faqs:0</code>, <code>enq:q:5</code>, <code>enq:lead</code>, <code>enq:la:1:0</code></td><td>FAQ list, FAQ 5, start enquiry, lead answer</td></tr>
+    <tr><td><code>qr:7</code>, <code>lang:gu</code>, <code>lang:pick</code>, <code>menu:p:1</code></td><td>Custom button 7, choose Gujarati, open language picker, menu page 2</td></tr>
   </tbody>
 </table>
 <h3>The conversation object <code>c</code></h3>
@@ -468,17 +480,52 @@ No staff at all = the business itself is one calendar.</code></pre>
     <tr><td>Cash (COD / pay at pickup)</td><td>Order confirmed immediately.</td><td>Not needed.</td></tr>
     <tr><td>UPI (free)</td><td>"Pay now" button opens <code>/pay/&lt;token&gt;</code>: a page with a "Pay with any UPI app" button (<code>upi://pay</code>) and a QR code. A web page is used because <code>upi://</code> links are not tappable inside WhatsApp.</td><td>Owner checks the bank app → taps <b>Payment received</b>.</td></tr>
     <tr><td>Online (Razorpay)</td><td>A Razorpay Payment Link is created per order.</td><td>Automatic: Razorpay calls <code>/webhooks/razorpay/&lt;business id&gt;</code> (event <code>payment_link.paid</code>), signature verified.</td></tr>
+    <tr><td>Card – Stripe (international)</td><td>A Stripe Checkout Session per order (cards, Apple/Google Pay). Customer returns to <code>/paid/&lt;token&gt;</code>.</td><td>Automatic: <code>/webhooks/stripe/&lt;business id&gt;</code> (<code>checkout.session.completed</code>), <code>Stripe-Signature</code> verified with 5-minute tolerance.</td></tr>
+    <tr><td>Any payment link</td><td>Template like <code>https://paypal.me/shop/{amount}</code> with <code>{amount}</code>, <code>{order_no}</code>, <code>{currency}</code>, <code>{phone}</code>.</td><td>Owner taps <b>Payment received</b>.</td></tr>
   </tbody>
 </table>
 <div class="callout warn"><span class="t">Idempotent by design</span><code>confirmPayment()</code> only changes orders that are still <code>NEW</code>. A double webhook or a double click cannot confirm twice or message the customer twice. Never confirm a payment from a customer's screenshot.</div>
 
-<h2>17. Optional AI layer</h2>
+<h2>17. AI assistant, knowledge base, menus, languages and integrations</h2>
+<h3>17.1 The AI brain (<code>src/services/ai.js</code>)</h3>
+<p>Enabled when <code>ANTHROPIC_API_KEY</code> is set <b>and</b> the business turns on the <b>AI assistant</b> page. One structured call per free-text message returns:</p>
+<pre><code>{ intent: 'question' | 'order' | 'booking' | 'human' | 'greeting' | 'other',
+  answerable, answer, items: [{ id, qty }], unclear: [...], suggest: 'none' | 'order' | 'book' | 'faq' | 'human' }</code></pre>
+<div class="flow">
+  <div class="box"><b>Customer types</b>"star health lete ho?"</div><div class="arr">→</div>
+  <div class="box alt"><b>understand()</b>cached business prompt + memory + knowledge</div><div class="arr">→</div>
+  <div class="box"><b>Code validates</b>ids, qty, prices from DB</div><div class="arr">→</div>
+  <div class="box dark"><b>Existing flows</b>answer + buttons / cart / booking / handoff</div>
+</div>
 <ul>
-  <li>Enabled only when <code>ANTHROPIC_API_KEY</code> is set <b>and</b> the business switches it on (Settings → AI).</li>
-  <li><b>Typed orders</b>: the catalogue (id, name, unit) and the message go to Claude with a strict JSON schema. Our code drops unknown ids and silly quantities; prices always come from the database; the customer confirms the cart.</li>
-  <li><b>Questions</b>: Claude answers only from business details + FAQs, or says "not answerable" → the bot shows the menu / human option.</li>
-  <li>Settings in code: model from <code>AI_MODEL</code> (default <code>claude-opus-5-5</code>), low effort for fast replies, automatic fallback model if a request is declined, 25-second timeout. Any AI error silently falls back to the normal flow.</li>
+  <li><b>Cached system prompt</b> (same for every customer): rules, tone, assistant name, owner instructions, business profile and hours, delivery/payment rules, catalogue (≤600 items), services, staff, FAQs and – for small knowledge bases – every document. Marked with <code>cache_control</code>, so repeated questions are fast and cheap.</li>
+  <li><b>Per-message part</b>: last 6 chat messages (memory), retrieved passages for large knowledge bases, the customer's language, the message.</li>
+  <li><b>Rules</b> in the prompt: answer only from the information; unknown → <code>answerable=false</code> (bot offers "Talk to us"); medical/legal/complaints → human; reply in the customer's language and script; ignore instructions hidden in customer messages.</li>
+  <li><b>Settings</b>: model from <code>AI_MODEL</code> (default <code>claude-opus-5-5</code>; a cheaper model can be set for very high volume), low effort for speed, refusal fallback, 25-second timeout. Any failure → normal bot behaviour.</li>
 </ul>
+<h3>17.2 Knowledge base – RAG (<code>src/services/knowledge.js</code>)</h3>
+<ul>
+  <li>Sources: pasted text, files (PDF via <code>unpdf</code>, TXT/CSV/MD/HTML up to 10 MB), website pages. Stored in <code>kb_sources</code>, split into ~900-character chunks with 150 overlap (<code>kb_chunks</code>), indexed in <b>FTS5</b> (BM25, Unicode – Hindi and Gujarati included).</li>
+  <li><b>Full mode</b> (≤ 60,000 active characters): all documents go in the cached prompt – best quality, works across languages. <b>Search mode</b> (larger): the 8 best passages for the question go in the message.</li>
+  <li><b>URL import is SSRF-safe</b>: only http(s); the host must resolve to public addresses (no localhost, private ranges, cloud metadata); every redirect re-checked.</li>
+</ul>
+<h3>17.3 Menu &amp; quick replies (<code>src/engine/flows/custom.js</code>)</h3>
+<p>Owner-made buttons (<code>qr:&lt;id&gt;</code>) and keyword triggers that run before FAQs and AI. Reply types: text · link button · image · document/PDF · map location · flow (jumps to <code>ord:start</code>, <code>bk:start</code>, <code>enq:lead</code>, <code>human</code>, <code>lang:pick</code>… through <code>c.dispatch()</code>). Menus with more than 10 options are paginated; an optional welcome image/logo is sent once a day.</p>
+<h3>17.4 Languages (<code>texts.js</code> + <code>texts-indic.js</code>)</h3>
+<p>Packs for English, Hinglish, Hindi and Gujarati. <code>customers.language</code> stores each customer's choice (language buttons, typing "language / bhasha / ભાષા", or asked on the first "Hi"). <code>text(biz, key, vars, lang)</code> resolves override → pack → English; <code>textFor(biz, phone, key)</code> makes reminders, order updates and aftercare follow the customer's language. Owners edit every text per language.</p>
+<h3>17.5 Integrations hub (<code>src/services/integrations.js</code>)</h3>
+<table>
+  <thead><tr><th>Target</th><th>How</th></tr></thead>
+  <tbody>
+    <tr><td>Webhook (n8n, Make, Zapier, own server)</td><td>JSON payload with header <code>X-WAK-Signature: sha256=HMAC(secret, body)</code> – reaches any CRM.</td></tr>
+    <tr><td>Google Sheets</td><td>Copy-paste Apps Script deployed as a web app; tabs per event type (Leads, Orders, Appointments…); shared token.</td></tr>
+    <tr><td>HubSpot</td><td>Private-app token; contact found/created by phone; a note with the event is attached to the contact.</td></tr>
+    <tr><td>Airtable</td><td>Row with Time, Event, Name, Phone, Summary, Details.</td></tr>
+  </tbody>
+</table>
+<p>Events: <code>customer.created</code>, <code>lead.created</code>, <code>order.created</code>, <code>order.updated</code>, <code>appointment.booked</code>, <code>appointment.updated</code>, <code>handoff.requested</code>, <code>feedback.received</code>. Delivery is immediate and non-blocking; failures are retried by the job queue (3 attempts) and every attempt is in <code>integration_log</code>. Simulator chats are never sent.</p>
+<h3>17.6 Same number on the phone app (coexistence)</h3>
+<p>When the owner replies from the WhatsApp Business app, Meta sends a <code>message_echoes</code> webhook. <code>recordEcho()</code> stores it in Chats (sent by "WhatsApp app") and pauses the bot for that customer.</p>
 
 <h2>18. Multi-client model, roles and security</h2>
 <table class="t-narrow">
@@ -510,21 +557,25 @@ No staff at all = the business itself is one calendar.</code></pre>
     <tr><td><code>/appointments</code>, <code>/slots</code>, <code>…/:id/status</code>, <code>…/:id/reschedule</code>, export</td><td>Appointments</td></tr>
     <tr><td><code>/customers</code> (+ import/export, delete = erase data), <code>/leads</code></td><td>CRM</td></tr>
     <tr><td><code>/chats</code>, <code>/chats/:phone/messages|send|pause|resume|done</code>, <code>/media/:id</code></td><td>Inbox</td></tr>
-    <tr><td><code>/texts</code>, <code>/templates</code>, <code>/templates/create</code>, <code>/broadcasts</code>, <code>/team</code></td><td>Bot texts, templates, campaigns, logins</td></tr>
+    <tr><td><code>/texts?lang=</code>, <code>/templates</code>, <code>/templates/create</code>, <code>/broadcasts</code>, <code>/team</code></td><td>Bot texts per language, templates, campaigns, logins</td></tr>
+    <tr><td><code>/knowledge</code> (+ <code>/file</code>, <code>/url</code>, <code>/search</code>, <code>/:id</code>), <code>/ai/try</code></td><td>Knowledge base and AI tester</td></tr>
+    <tr><td><code>/quick-replies</code> (CRUD)</td><td>Custom menu buttons and keyword replies</td></tr>
+    <tr><td><code>/integrations</code>, <code>/integrations/test</code></td><td>Integration config, delivery log, Apps Script; test delivery</td></tr>
     <tr><td><code>/sim/messages|message|reset|run-jobs</code></td><td>Simulator</td></tr>
   </tbody>
 </table>
-<p>Public (no login): <code>GET/POST /webhook</code>, <code>GET /pay/:token</code>, <code>POST /webhooks/razorpay/:bizId</code>, <code>GET /q/:slug</code> (redirects to WhatsApp), <code>GET /q/:slug/qr.png</code>, <code>GET /health</code>.</p>
+<p>Public (no login): <code>GET/POST /webhook</code>, <code>GET /pay/:token</code>, <code>GET /paid/:token</code>, <code>POST /webhooks/razorpay/:bizId</code>, <code>POST /webhooks/stripe/:bizId</code>, <code>GET /q/:slug</code> (redirects to WhatsApp), <code>GET /q/:slug/qr.png</code>, <code>GET /health</code>.</p>
 
 <h2>20. Tests</h2>
-<p><code>npm test</code> runs 24 tests in an in-memory database, without internet:</p>
+<p><code>npm test</code> runs 37 tests in an in-memory database, without internet:</p>
 <table>
   <thead><tr><th>File</th><th>Covers</th></tr></thead>
   <tbody>
     <tr><td><code>test/ordering.test.js</code></td><td>Full order, UPI + idempotent payment, search, minimum order, stock changes, WhatsApp limits, reorder, location, handoff, STOP, Hinglish, text overrides</td></tr>
     <tr><td><code>test/booking.test.js</code></td><td>Triage → booking, double-booking guard, "any staff", holidays, reminder → confirm, reschedule, cancel, aftercare, check-in branches, recall, template fallback, FAQ + lead</td></tr>
     <tr><td><code>test/api.test.js</code></td><td>Webhook verify/signature/de-dup, login, CSRF, roles, secret masking, CSV import, simulator, pay page, inbox</td></tr>
-    <tr><td><code>test/ai.test.js</code></td><td>AI request shape and validation of AI output (mock server)</td></tr>
+    <tr><td><code>test/ai.test.js</code></td><td>AI brain against a mock API: cached prompt, structured output, chat memory, typed orders, knowledge answers with buttons, booking/human intents, large-KB search mode</td></tr>
+    <tr><td><code>test/features.test.js</code></td><td>Knowledge base (Unicode search, files, SSRF guard), quick replies, menu pagination, Gujarati/Hindi + reminders in customer language, integrations (signature, Sheets, HubSpot, retries), Stripe, payment links, coexistence</td></tr>
   </tbody>
 </table>
 <p>Write a new test with the helper customer:</p>
@@ -551,7 +602,10 @@ test('my feature', async () =&gt; {
       <li><b>Products</b> → Import CSV (tick "Replace") <i>or</i> <b>Services &amp; staff</b> → services (duration, price, aftercare, recall days), staff (hours, services), holidays.</li>
       <li><b>FAQs</b>: replace examples with the client's 5–10 questions; add English + Hindi keywords.</li>
       <li><b>Settings → Appointments / Enquiry form</b>: triage or lead questions.</li>
-      <li><b>Bot messages</b>: adjust tone and words to the client's style.</li>
+      <li><b>Bot messages</b>: adjust tone and words to the client's style (per language if needed).</li>
+      <li><b>Menu &amp; quick replies</b>: their own buttons – price-list PDF, offers, location, website.</li>
+      <li><b>AI assistant</b> (if sold): turn on, add knowledge (PDF / website / text), run 10 real questions in "Try a question".</li>
+      <li><b>Integrations</b> (if sold): Google Sheets / HubSpot / Airtable / n8n webhook → Send test.</li>
       <li><b>Test the bot</b>: every path (see the test checklist below).</li>
     </ol></div>
   <div class="ev"><div class="when">Day 1 · Demo (30 min)</div>Screen-share <b>Test the bot</b>. Let the owner tap through. Note changes; most take minutes in Bot messages / Settings.</div>
@@ -624,7 +678,12 @@ test('my feature', async () =&gt; {
     <tr><td>"Alerts to my receptionist too"</td><td>Staff WhatsApp number (bookings) or add a Team login.</td></tr>
     <tr><td>"Send Diwali offer to customers"</td><td>Create a Marketing template in Meta → Broadcasts (opted-in only).</td></tr>
     <tr><td>"Import my old patients"</td><td>Customers → Import CSV with last_visit + service (schedules recalls).</td></tr>
-    <tr><td>"Understand typed orders"</td><td><code>ANTHROPIC_API_KEY</code> on the server + Settings → AI.</td></tr>
+    <tr><td>"Answer questions from our documents / website"</td><td><code>ANTHROPIC_API_KEY</code> on the server → <b>AI assistant</b>: turn on, add knowledge (text, PDF, website pages), "Try a question".</td></tr>
+    <tr><td>"Understand typed orders"</td><td>AI assistant → "Understand typed orders" ON.</td></tr>
+    <tr><td>"A Price list button that sends our PDF"</td><td><b>Menu &amp; quick replies</b> → button, type Document, PDF link, keywords "price list, rate".</td></tr>
+    <tr><td>"Leads in our Google Sheet / HubSpot / Zoho"</td><td><b>Integrations</b> → Sheets / HubSpot / webhook to n8n or Make for Zoho → Send test.</td></tr>
+    <tr><td>"Customers speak Gujarati / Hindi"</td><td>Settings → Languages (let customers choose) or Business → Bot language; edit texts per language.</td></tr>
+    <tr><td>"Card payments for foreign customers"</td><td>Settings → Ordering → Stripe (keys + webhook URL), or a PayPal.me link.</td></tr>
     <tr><td>"Change the dashboard colour to our brand"</td><td>The only CSS change: <code>--brand</code> in <code>public/app/styles.css</code> (affects all clients on that server).</td></tr>
   </tbody>
 </table>
@@ -722,6 +781,14 @@ pm2 restart whatsapp-bot</code></pre><p>New database migrations run automaticall
     <tr><td>Customer sent a voice note / photo</td><td>Not part of a flow.</td><td>Bot acknowledges and alerts the owner; open it in Chats (📎 Open attachment).</td></tr>
     <tr><td>Customer typed STOP by mistake</td><td>They are opted out of reminders/updates.</td><td>They send START, or Customers → Edit → "Receives reminders &amp; updates" ON.</td></tr>
     <tr><td>Bot keeps saying "We are closed"</td><td>Wrong hours or time zone.</td><td>Settings → Opening hours; Settings → Business → Time zone.</td></tr>
+    <tr><td>AI gives a wrong or old answer</td><td>Outdated knowledge, or conflicting FAQ.</td><td>Edit/disable the knowledge source, fix the FAQ, add an owner instruction; re-check with "Try a question".</td></tr>
+    <tr><td>AI says "not sure" too often</td><td>The information isn't in the knowledge base.</td><td>Add the missing facts (prices, areas, timings) as text or FAQ.</td></tr>
+    <tr><td>AI never replies</td><td>No API key, AI switched off, key invalid/out of credit.</td><td>Check <code>ANTHROPIC_API_KEY</code>, AI assistant toggle, server logs (<code>ai call failed</code>).</td></tr>
+    <tr><td>PDF upload says "no text"</td><td>Scanned (image) PDF.</td><td>Paste the text instead, or export a text PDF.</td></tr>
+    <tr><td>Customer stuck in the wrong language</td><td>They tapped another language.</td><td>They type <code>language</code>; or Customers → edit (or reset by deleting the language in DB).</td></tr>
+    <tr><td>Google Sheet not receiving rows</td><td>Script not deployed as web app for "Anyone", or token mismatch.</td><td>Redeploy (new version), copy the new URL, same secret word; check Integrations → Delivery log.</td></tr>
+    <tr><td>HubSpot 401/403</td><td>Token wrong or missing contact scopes.</td><td>Private app with <code>crm.objects.contacts.read/write</code>; paste the token again.</td></tr>
+    <tr><td>Airtable "UNKNOWN_FIELD_NAME"</td><td>Columns missing.</td><td>Create Time, Event, Name, Phone, Summary, Details.</td></tr>
   </tbody>
 </table>
 
@@ -737,6 +804,7 @@ pm2 restart whatsapp-bot</code></pre><p>New database migrations run automaticall
     <tr><td>Customer wants to change an order</td><td>No self-edit after placing (by design).</td><td>Cancel it with reason "Please order again with changes", or adjust manually and tell the customer in Chats.</td></tr>
     <tr><td>Wrong delivery address</td><td>Customer saved an old address.</td><td>Reply in Chats; update Customers → Edit → Address.</td></tr>
     <tr><td>Prices changed – old carts?</td><td>Carts are re-priced at checkout.</td><td>Nothing to do – customers pay current prices.</td></tr>
+    <tr><td>Stripe paid but order not confirmed</td><td>Webhook URL / signing secret / event wrong.</td><td>Stripe → Webhooks: URL from Settings → Ordering, event <code>checkout.session.completed</code>, same <code>whsec_</code> secret. Meanwhile tap Payment received.</td></tr>
     <tr><td>Refund needed</td><td>Refunds happen in the bank/Razorpay.</td><td>Refund there; cancel the order with a reason. (Refund status automation is in the future scope.)</td></tr>
   </tbody>
 </table>
@@ -795,17 +863,18 @@ pm2 restart whatsapp-bot</code></pre><p>New database migrations run automaticall
 callback_done: 'Thanks{name_sp}! We will call you {when}. 📞',</code></pre>
 <div class="callout note">Keys are grouped in the editor by position: keys placed between <code>choose_category</code> and <code>choose_service</code> show under "Ordering", and so on. New keys at the end appear under "Enquiry".</div>
 
-<h2>34. Recipe: add a new language (e.g. Gujarati)</h2>
+<h2>34. Recipe: add a new language (e.g. Marathi)</h2>
+<p class="small muted">English, Hinglish, Hindi and Gujarati are already built in (<code>src/engine/texts-indic.js</code>). Same steps for any other language:</p>
 <pre><code><span class="c">// src/engine/texts.js</span>
-const gujarati = {
+const marathi = {
   ...en,                                   <span class="c">// anything not translated falls back to English</span>
-  welcome: 'નમસ્તે{name_sp}! 🙏 *{business}* માં આપનું સ્વાગત છે.\nઅમે આપની શું મદદ કરી શકીએ?',
-  menu_order: '🛒 ઓર્ડર કરો',
+  welcome: 'नमस्कार{name_sp}! 🙏 *{business}* मध्ये आपले स्वागत आहे.\nआम्ही आपली काय मदत करू?',
+  menu_order: '🛒 ऑर्डर करा',
   <span class="c">// …translate the rest…</span>
 };
-export const DEFAULT_TEXTS = { en, hinglish, gujarati };
-export const LANGUAGES = { en: 'English', hinglish: 'Hinglish', gujarati: 'Gujarati' };</code></pre>
-<p>Restart. "Gujarati" now appears in Settings → Business → Bot language. Remember WhatsApp button limits (20 characters) also apply to other scripts.</p>
+export const DEFAULT_TEXTS = { en, hinglish, hi, gu, mr: marathi };
+export const LANGUAGES = { …, mr: 'मराठी – Marathi' };   // and LANGUAGE_SELF.mr = 'मराठी'</code></pre>
+<p>Restart. "Marathi" now appears in Settings → Business → Bot language and Settings → Languages. Remember WhatsApp button limits (20 characters) also apply to other scripts.</p>
 
 <h2>35. Recipe: add a new setting (e.g. packing charge)</h2>
 <ol class="steps">
@@ -899,18 +968,17 @@ registerJob('order.feedback', async (job) =&gt; {
   <li>Add the option to <code>orderingFields</code> (settings page).</li>
 </ol>
 
-<h2>40. Recipe: send events to Google Sheets, a CRM or Zapier</h2>
-<p>Add a small helper and call it where events happen (order created, booking, lead):</p>
-<pre><code><span class="c">// src/services/integrations.js</span>
-export async function emit(biz, event, data) {
-  const url = biz.settings.integrations?.webhook_url;     <span class="c">// new setting with default ''</span>
-  if (!url) return;
-  fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ event, business: biz.slug, at: new Date().toISOString(), data }),
-    signal: AbortSignal.timeout(10000) }).catch(() =&gt; {});
-}
-<span class="c">// e.g. in orders.js createOrder(): emit(biz, 'order.created', order);</span></code></pre>
-<p>Point the URL at a Google Apps Script web app (append a row), Zapier/Make "Catch hook", or the client's CRM API.</p>
+<h2>40. Recipe: add another integration target (e.g. Slack, Zoho direct)</h2>
+<p>Google Sheets, HubSpot, Airtable and webhooks (n8n/Make/Zapier) are built in. To add a direct target:</p>
+<ol class="steps">
+  <li>Add a default in <code>DEFAULT_SETTINGS.integrations</code>, e.g. <code>slack: { enabled: false, url: '' }</code>, and its name to <code>TARGETS</code> in <code>integrations.js</code>.</li>
+  <li>In <code>deliver()</code> add a branch:
+<pre><code>else if (target === 'slack') result = await post(cfg.url, JSON.stringify({ text: `*${payload.summary}*\n${payload.contact.phone || ''}` }));</code></pre></li>
+  <li>Secrets (API tokens): add a mapping in <code>SECRET_SETTINGS</code> in <code>routes/api.js</code> (e.g. <code>slack_token: 'integrations.slack.token_enc'</code>) so they are encrypted and masked.</li>
+  <li>Add a card in <code>public/app/pages/integrations.js</code> (toggle, fields, Send test).</li>
+  <li>Test with a mocked <code>fetch</code> like <code>test/features.test.js</code>.</li>
+</ol>
+<div class="callout tip">Most "connect to X" requests need no code: send the webhook to n8n/Make and connect X there.</div>
 
 <h2>41. Recipe: branding and small UI changes</h2>
 <ul>
@@ -940,11 +1008,14 @@ export async function emit(biz, event, data) {
     <tr><td>Delivery rider app / live tracking</td><td>Rider login role, "Out for delivery" with assigned rider, location link.</td><td><span class="badge w">L</span></td><td>roles, orders, new page</td></tr>
     <tr><td>One number, many branches</td><td>"Choose branch" first step; branch_id on orders/appointments; per-branch staff &amp; stock.</td><td><span class="badge w">L</span></td><td>schema + flows</td></tr>
     <tr><td>Google Calendar sync for doctors</td><td>OAuth per staff; push bookings; read busy times into <code>busy()</code>.</td><td><span class="badge w">L</span></td><td>appointments.js</td></tr>
-    <tr><td>Google Sheets / CRM / Zapier</td><td>Outgoing webhook events (recipe 40).</td><td><span class="badge">S</span></td><td>integrations.js</td></tr>
+    <tr><td>Google Sheets / CRM / Zapier</td><td><b>✅ Built</b> – Integrations page (Sheets, HubSpot, Airtable, webhooks). New targets: recipe 40.</td><td><span class="badge">S</span></td><td>integrations.js</td></tr>
     <tr><td>Lab reports / documents to patients</td><td>Upload in dashboard → send as WhatsApp document.</td><td><span class="badge">S</span></td><td>inbox + builders.document</td></tr>
     <tr><td>Voice notes understood</td><td>Download media → speech-to-text → treat as text.</td><td><span class="badge b">M</span></td><td>engine media branch</td></tr>
-    <tr><td>More languages (Gujarati, Marathi, Tamil…)</td><td>Recipe 34.</td><td><span class="badge">S</span></td><td>texts.js</td></tr>
-    <tr><td>Smarter AI assistant</td><td>Claude with tools (search catalogue, check slots, create booking) behind the same validation.</td><td><span class="badge w">L</span></td><td>ai.js + engine</td></tr>
+    <tr><td>More languages (Marathi, Tamil, Bengali…)</td><td>Hindi, Gujarati, Hinglish <b>✅ built</b> with customer choice; others: recipe 34.</td><td><span class="badge">S</span></td><td>texts.js</td></tr>
+    <tr><td>Smarter AI assistant</td><td>Knowledge-base answers, typed orders and intents <b>✅ built</b>. Next: Claude with tools (check live slots, track an order) behind the same validation.</td><td><span class="badge b">M</span></td><td>ai.js + engine</td></tr>
+    <tr><td>OpenAI / Gemini as alternative AI engines</td><td>Provider switch inside <code>understand()</code> with the same JSON schema and validation.</td><td><span class="badge b">M</span></td><td>ai.js</td></tr>
+    <tr><td>Twilio / 360dialog as WhatsApp providers</td><td>Adapter behind <code>sender.js</code> + webhook parser per provider (360dialog is almost identical to Cloud API).</td><td><span class="badge b">M</span></td><td>whatsapp/, routes/webhook.js</td></tr>
+    <tr><td>Website chat widget / Telegram / Instagram</td><td>New channel adapters feeding the same engine (<code>handleIncoming</code>).</td><td><span class="badge w">L</span></td><td>new routes + sender</td></tr>
     <tr><td>Reports (monthly sales, repeat rate, no-show rate)</td><td>SQL reports page + CSV/PDF export.</td><td><span class="badge b">M</span></td><td>api.js + page</td></tr>
     <tr><td>Email / SMS alerts too</td><td>Add channels to <code>notify.js</code> (SMTP / SMS provider).</td><td><span class="badge">S</span></td><td>notify.js</td></tr>
     <tr><td>Two-factor login, per-user permissions</td><td>TOTP on login; permission list per role.</td><td><span class="badge b">M</span></td><td>middleware, users</td></tr>
@@ -993,6 +1064,9 @@ export async function emit(biz, event, data) {
     <tr><td>Template slot</td><td>One of five business-initiated message types linked to an approved Meta template.</td></tr>
     <tr><td>Job</td><td>A scheduled task in the <code>jobs</code> table (reminder, check-in, recall, broadcast).</td></tr>
     <tr><td>Simulator</td><td>"Test the bot" page; phone numbers starting with <code>sim</code> are never sent to WhatsApp.</td></tr>
+    <tr><td>RAG / knowledge base</td><td>Documents the AI answers from (retrieval-augmented generation).</td></tr>
+    <tr><td>Quick reply</td><td>Owner-made button or keyword trigger with a fixed reply.</td></tr>
+    <tr><td>Integration event</td><td>Something that happened (new lead, order…) sent to Sheets/CRM/webhooks.</td></tr>
     <tr><td>Dry run</td><td>Message recorded but not sent because the business isn't connected yet.</td></tr>
     <tr><td>Minor units (paise)</td><td>How money is stored: ₹1 = 100.</td></tr>
   </tbody>
@@ -1004,6 +1078,7 @@ export async function emit(biz, event, data) {
     <tr><td><code>docs/User-Guide.pdf</code></td><td>For business owners and staff – every screen, industry playbooks (clinic, mart, cafe…), daily routine.</td></tr>
     <tr><td><code>docs/DEVELOPER_GUIDE.md</code></td><td>Markdown version of the technical reference.</td></tr>
     <tr><td><code>docs/CLIENT_ONBOARDING.md</code></td><td>Copy-paste requirements form and delivery checklist.</td></tr>
+    <tr><td><code>docs/FIVERR_GIG.md</code> + <code>docs/fiverr/</code></td><td>Ready-to-paste Fiverr gig (packages, description, FAQ) with delivery checklist per package, and gallery images.</td></tr>
     <tr><td><code>docs/META_WHATSAPP_SETUP.md</code></td><td>Detailed Meta setup and templates.</td></tr>
     <tr><td><code>docs/DEPLOYMENT.md</code></td><td>VPS, Docker, Render step by step.</td></tr>
     <tr><td><code>docs/USE_CASES.md</code></td><td>100 business types mapped to presets and settings.</td></tr>

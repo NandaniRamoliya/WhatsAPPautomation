@@ -18,7 +18,7 @@ For the non-technical client manual see [USER_GUIDE.md](USER_GUIDE.md). For deli
 9. [Sending messages: the 24-hour window, templates, limits](#9-sending-messages)
 10. [Scheduler & background jobs](#10-scheduler--background-jobs)
 11. [Payments](#11-payments)
-12. [Optional AI layer (Claude)](#12-optional-ai-layer-claude)
+12. [AI assistant, knowledge base and the new no-code features](#12-ai-assistant-knowledge-base-and-the-new-no-code-features)
 13. [Multi-tenant (agency) model](#13-multi-tenant-agency-model)
 14. [Dashboard (frontend)](#14-dashboard-frontend)
 15. [REST API reference](#15-rest-api-reference)
@@ -79,7 +79,8 @@ Useful commands:
 |---|---|
 | `npm start` | Run the server (dashboard + webhook + scheduler) |
 | `npm run dev` | Same, restarts on file changes |
-| `npm test` | Full test suite (engine, booking, API, webhook, AI) – no network needed |
+| `npm test` | Full test suite (37 tests: engine, booking, API, webhook, AI, knowledge, integrations, languages, payments) – no network needed |
+| `node docs/guides/build-pdf.cjs` / `node docs/fiverr/src/build.cjs` | Rebuild the PDF guides / Fiverr gallery images (needs Playwright) |
 | `npm run demo` | Seed demo businesses (idempotent) |
 | `npm run create-admin -- you@x.com "Passw0rd!"` | Create a super-admin or reset any login's password |
 | `npm run users` | List all dashboard logins (which database, which business) |
@@ -143,6 +144,8 @@ src/
     flows/ordering.js    Ordering flow
     flows/booking.js     Booking flow
     flows/enquiry.js     FAQ + lead flow
+    flows/custom.js      owner-made menu buttons & keyword quick replies
+    texts-indic.js       Hindi + Gujarati language packs
   services/
     business.js          Tenant loading/caching, DEFAULT_SETTINGS, credentials
     setup.js             create business/user, presets, first super-admin
@@ -156,7 +159,9 @@ src/
     jobs.js              durable job queue
     scheduler.js         loop: jobs, cart nudges, auto-complete, housekeeping
     broadcasts.js        template campaigns in throttled batches
-    ai.js                optional Claude: order parsing + FAQ answers
+    ai.js                optional Claude brain: understand() -> question / order / booking / human (RAG)
+    knowledge.js         knowledge base: chunking, PDF/URL/file import (SSRF-safe), FTS5 search
+    integrations.js      events -> webhook (n8n/Make/Zapier), Google Sheets, HubSpot, Airtable + retries/log
   presets/index.js       12 business presets with sample data
   routes/
     webhook.js           GET/POST /webhook
@@ -247,7 +252,7 @@ never needs a data migration.
 5. **Choices** → dispatched by id prefix to the owning flow (`ord:`, `bk:`, `enq:`).
 6. **Native catalogue order** → ordering.
 7. **Location / media / text inside an active step** → the flow that owns the current `state`.
-8. **Free text in the menu** → FAQ keyword match → product search (or AI order parsing) → AI answer (if enabled).
+8. **Free text in the menu** → owner quick-reply keywords → FAQ keyword match → **AI brain** (if enabled: answer / typed order / booking / handoff) → product search.
 9. Nothing matched → polite main menu (never stuck, never silent).
 
 **IDs are the API between messages and code.** Every button/list row id is `prefix:action:arg…`, e.g.
@@ -360,19 +365,82 @@ Every handler re-checks current state (appointment still active? customer still 
 random (no order enumeration). **Never confirm based on a customer's screenshot.**
 To add another gateway (Cashfree, PhonePe, Stripe): add `createXLink()` + a webhook route that calls `confirmPayment`.
 
-## 12. Optional AI layer (Claude)
+## 12. AI assistant, knowledge base and the new no-code features
 
-`services/ai.js`, enabled when `ANTHROPIC_API_KEY` is set **and** the business turns on Settings → AI.
+### 12.1 AI brain (`src/services/ai.js`)
+Enabled when `ANTHROPIC_API_KEY` is set **and** the business turns on **AI assistant** in the dashboard.
+One structured call (`understand()`) classifies a free-text message and returns:
 
-* `parseOrderText` – maps "2 kilo aata aur 1 maggi" to catalogue ids using **structured outputs** (Zod schema).
-  Code then drops unknown ids and absurd quantities; prices always come from the DB; the customer confirms the cart.
-* `answerQuestion` – answers only from business details + FAQs; returns `answerable: false` for anything else
-  (medical advice, complaints) so the bot falls back to the menu / human.
+```js
+{ intent: 'question'|'order'|'booking'|'human'|'greeting'|'other',
+  answerable, answer, items: [{ id, qty }], unclear: [...], suggest: 'none'|'order'|'book'|'faq'|'human' }
+```
 
-Implementation details: `client.beta.messages.parse` with `betaZodOutputFormat`, `output_config.effort: 'low'`
-(fast chat replies), server-side refusal fallback (`fallbacks: 'default'` with the `server-side-fallback-2026-07-01`
-beta), 25 s timeout, 1 retry, any error → silently fall back to the normal flow. Model from `AI_MODEL`
-(default `claude-opus-5-5`). `test/ai.test.js` verifies the request shape against a local mock.
+The engine (`aiReply()` in `src/engine/index.js`) then routes into the **existing, tested flows**:
+`order` → items added to cart (`addAiItems`) for the customer to confirm · `booking` → booking flow ·
+`human` → handoff · answerable question → answer + next-step buttons (Book now / Order now / FAQs / Menu / Talk to us) ·
+not answerable → product search, else "not sure – talk to us?".
+
+Prompt design:
+* **System prompt (stable, cached with `cache_control`)**: rules, tone, assistant name, owner instructions,
+  business profile + hours, ordering rules, catalogue (≤600 items), services, staff, FAQs and – for small
+  knowledge bases – the whole knowledge base. Same for every customer → cheap cache reads.
+* **User message (per request)**: last 6 chat messages (memory), retrieved knowledge passages (large KBs),
+  the customer's chosen language, the message.
+* Structured output via `client.beta.messages.parse` + `betaZodOutputFormat`, `effort: 'low'`, server-side refusal
+  fallback (`fallbacks: 'default'`), 25 s timeout, 1 retry. Model: `AI_MODEL` (default `claude-opus-5-5`;
+  set a cheaper model for very high volume).
+* **Code validates**: product ids must exist and be in stock, 0 < qty < 100, prices always from the DB, orders
+  and bookings still need the customer's confirmation. Any AI failure silently falls back to the normal bot.
+
+### 12.2 Knowledge base / RAG (`src/services/knowledge.js`, migration `002`)
+Tables `kb_sources` (title, kind text/file/url, full text) and `kb_chunks` (≈900-char chunks, 150 overlap), with an
+**FTS5** index `kb_fts` (BM25, `unicode61` tokenizer – Hindi/Gujarati work) kept in sync by triggers.
+* Sources: pasted text, uploaded files (PDF via `unpdf`, TXT/CSV/MD/HTML; ≤10 MB), website pages (HTML → text).
+* URL import is **SSRF-safe**: http(s) only, DNS-resolved addresses must be public (no 127/8, 10/8, 172.16/12,
+  192.168/16, 169.254/16, 100.64/10, IPv6 local), redirects re-checked (max 3).
+* `knowledgeFor()`: if active knowledge ≤ 60,000 chars → **full mode** (all text in the cached system prompt: best
+  quality, language independent); else **search mode** (top 8 FTS passages in the user message).
+* Limits: 400k chars per source, 2M per business. Dashboard: **AI assistant** page (add/edit/disable/delete,
+  "Try a question").
+
+### 12.3 Menu & quick replies (`src/engine/flows/custom.js`, table `quick_replies`)
+Owner-made buttons and keyword triggers. `reply_type`: `text` · `link` (CTA URL button) · `image` · `document`
+(e.g. price-list PDF) · `location` (lat/lng pin) · `flow` (jumps to any id: `ord:start`, `bk:start`, `enq:lead`,
+`human`, `lang:pick`, `menu` via `c.dispatch(id)`). Keywords match whole words/phrases (Unicode aware, longest
+wins) and run **before** FAQs and AI. Buttons appear in the main menu (before/after standard items:
+`settings.custom_menu_position`); menus with >10 items are paginated (`menu:p:N`). Optional
+`settings.welcome_image_url` is sent with the first welcome of the day.
+
+### 12.4 Languages (`src/engine/texts.js`, `texts-indic.js`)
+Packs: `en`, `hinglish`, `hi` (Devanagari), `gu` (Gujarati). `customers.language` stores each customer's choice
+(`lang:<code>` buttons, typing "language/bhasha/ભાષા", or asked on first "Hi" when
+`settings.language_choice.enabled` + `ask_first`). `text(biz, key, vars, lang)` resolves
+per-language override → pack → English; `textFor(biz, phone, key)` is used by scheduled/dashboard messages
+(reminders, order updates, aftercare…) so they follow the customer's language. Overrides for non-primary languages
+live in `biz.texts['@<lang>']`; the Bot messages page has a language selector. Add a language: recipe in §17.
+
+### 12.5 Integrations hub (`src/services/integrations.js`)
+`emit(biz, event, data)` is called on: `customer.created`, `lead.created`, `order.created`, `order.updated`,
+`appointment.booked`, `appointment.updated`, `handoff.requested`, `feedback.received`.
+Targets (configured in `settings.integrations`, secrets encrypted): **webhook** (JSON + `X-WAK-Signature:
+sha256=HMAC(secret, body)` → n8n / Make / Zapier / any CRM) · **Google Sheets** (copy-paste Apps Script web app;
+tabs per event type; shared token) · **HubSpot** (contact search/create by phone + note associated with type 202) ·
+**Airtable** (row with Time, Event, Name, Phone, Summary, Details). Delivery is immediate and non-blocking;
+failures go to the job queue (`integration.retry`, 3 attempts); every attempt is in `integration_log`
+(Integrations page). Simulator chats (`sim…`) are never sent. Payload: `{ id, event, at, business, contact,
+summary, data, sheet, row }`.
+
+### 12.6 Payments v2
+New modes: **`stripe`** – Stripe Checkout Session (REST, form-encoded; `client_reference_id = bizId-orderId`;
+zero-decimal currencies handled) + webhook `POST /webhooks/stripe/:bizId` verifying `Stripe-Signature`
+(`t=…,v1=…`, HMAC of `t.rawBody`, 5-minute tolerance), events `checkout.session.completed` /
+`async_payment_succeeded`, de-duplicated, then `confirmPayment()`; **`link`** – any payment URL template with
+`{amount}`, `{order_no}`, `{currency}`, `{phone}` (manual confirmation like UPI). Return page: `/paid/:token`.
+
+### 12.7 Same number on the phone app (coexistence)
+Webhook `value.message_echoes` (owner replied from the WhatsApp Business app) → `recordEcho()` logs the message
+(`sent_by = 'WhatsApp app'`) and pauses the bot for that customer, so the human leads the conversation.
 
 ## 13. Multi-tenant (agency) model
 
@@ -420,13 +488,16 @@ Super-admins add `X-Business-Id: <id>`.
 | `GET /customers?q=&tag=` · `PUT/DELETE /customers/:id` · `POST /customers/import` · `GET /customers-export.csv` | Customers (delete = data erasure) |
 | `GET /leads` · `PUT /leads/:id` · `GET /leads-export.csv` | Enquiries |
 | `GET /chats` · `GET /chats/:phone/messages` · `POST /chats/:phone/send|pause|resume|done` · `GET /media/:id` | Inbox |
-| `GET/PUT /texts` | Bot text overrides (`null` resets a key) |
+| `GET/PUT /texts?lang=` | Bot text overrides per language (`null` resets a key) |
+| `GET /knowledge` · `GET/PUT/DELETE /knowledge/:id` · `POST /knowledge` (text) · `POST /knowledge/file` (`{filename, mime, base64}`) · `POST /knowledge/url` · `POST /knowledge/search` · `POST /ai/try` | Knowledge base + AI tester |
+| `GET/POST/PUT/DELETE /quick-replies[/:id]` | Custom menu buttons & quick replies |
+| `GET /integrations` · `POST /integrations/test` `{target}` | Integration config (masked), events, delivery log, Apps Script · test delivery |
 | `GET /templates` · `POST /templates/create` | Template slots + Meta status, one-click creation |
 | `GET /broadcasts` · `POST /broadcasts/preview` · `POST /broadcasts` | Campaigns |
 | `GET/POST/PUT/DELETE /team[/:id]` | Business logins |
 | `GET /sim/messages` · `POST /sim/message` · `POST /sim/reset` · `POST /sim/run-jobs` | Simulator |
 
-Public: `GET/POST /webhook`, `GET /pay/:token`, `POST /webhooks/razorpay/:bizId`, `GET /q/:slug` (redirect to
+Public: `GET/POST /webhook`, `GET /pay/:token`, `GET /paid/:token`, `POST /webhooks/razorpay/:bizId`, `POST /webhooks/stripe/:bizId`, `GET /q/:slug` (redirect to
 wa.me), `GET /q/:slug/qr.png`, `GET /health`.
 
 ## 16. Customising for a client
@@ -502,7 +573,8 @@ npm test
 | `ordering.test.js` | Full COD order, UPI pay link + idempotent confirm, search, min order, stock changes, WhatsApp limits & pagination, reorder, location, handoff, STOP, Hinglish + overrides |
 | `booking.test.js` | Triage → booking, double-booking guard, any-staff assignment, holidays, reminders → confirm, reschedule, cancel, aftercare, check-in branches, recall, template fallback after 24h, FAQ + lead, media |
 | `api.test.js` | Webhook verify, signature, de-dup, mark-read, auth, CSRF, roles, secret masking, CSV import/export, simulator + pay page + order status, inbox pause/resume |
-| `ai.test.js` | Claude request shape (model, structured output, fallbacks, effort), validation of AI output |
+| `ai.test.js` | AI brain: request shape (model, cached system prompt, structured output, fallbacks, effort, chat memory), typed orders, KB answers with next-step buttons, booking/human intents, large-KB search mode |
+| `features.test.js` | Knowledge base (chunking, Unicode FTS incl. Gujarati, update/delete, file/HTML extraction, SSRF guard), quick replies (document/text/link/flow, menu pagination), language picker + Gujarati reminders + per-language overrides, integrations (signed webhook, Sheets, HubSpot, Airtable failure → retry + log, simulator excluded), Stripe checkout + signature, payment links, coexistence echo |
 
 Manual end-to-end: **Test the bot** page + "⏩ Fast-forward time" to fire reminders/check-ins immediately.
 

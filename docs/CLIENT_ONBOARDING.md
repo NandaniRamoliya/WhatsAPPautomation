@@ -63,7 +63,17 @@ Copy this into a Google Form, or fill it with the client on a 20-minute call.
 | Words customers use for each (in English and Hindi/local language) | |
 | Enquiry form questions (e.g. Budget, Location, Requirement) | |
 
-### 6. Extras
+### 6. AI, menu buttons, languages and integrations
+| Question | Answer |
+|---|---|
+| Documents / website pages the AI should learn from (price list, menu, policies, profiles) | |
+| Tone and anything the AI must always/never say | |
+| Custom menu buttons wanted (Price list PDF, Offers, Location, Website…) with their content | |
+| Languages customers use (English, Hindi, Gujarati, Hinglish) | |
+| Where leads/orders should go: Google Sheet, HubSpot, Airtable, n8n/Make/Zapier webhook | |
+| International customers? (Stripe card payments / PayPal link) | |
+
+### 7. Extras
 | Question | Answer |
 |---|---|
 | Who replies when a customer asks for a person? During which hours? | |
@@ -87,6 +97,10 @@ Copy this into a Google Form, or fill it with the client on a 20-minute call.
 3. [ ] **FAQs**: replace the examples with the client's 5–10 questions + keywords (add Hinglish words).
 4. [ ] **Settings → Appointments / Enquiry form**: triage questions / lead questions.
 5. [ ] **Bot messages**: adjust tone and words to the client's style (they love seeing their own phrases).
+5b. [ ] **Menu & quick replies**: their own buttons (price list PDF, offers, location…) and keywords.
+5c. [ ] **AI assistant** (if sold): knowledge base + "Try a question" with 10 real questions; tone/instructions.
+5d. [ ] **Integrations** (if sold): Google Sheets / CRM / webhook → Send test → real test lead.
+5e. [ ] **Languages**: Settings → Languages if customers use Hindi/Gujarati.
 6. [ ] **Test the bot**: run every path – order with each payment mode, booking, reschedule, cancel,
        "⏩ Fast-forward time" for reminders, "Visit done" → check-in → review, FAQ, enquiry, *talk to someone*, STOP.
 7. [ ] Demo to the client using **Test the bot** on screen-share. Collect changes. Fix them in 10 minutes.

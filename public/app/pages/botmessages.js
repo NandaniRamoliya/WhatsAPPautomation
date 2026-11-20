@@ -6,7 +6,8 @@ const PREVIEW = { business: 'Your Shop', name_sp: ' Neha', name: 'Neha', order_n
 
 export function BotMessages() {
   const { biz } = useApp();
-  const { data, error, loading, reload } = useApi('/texts');
+  const [lang, setLang] = useState(biz.language);
+  const { data, error, loading, reload } = useApi(`/texts?lang=${lang}`, [lang]);
   const [group, setGroup] = useState('General');
   const [edits, setEdits] = useState({});
   const [q, setQ] = useState('');
@@ -16,14 +17,16 @@ export function BotMessages() {
   const changed = Object.keys(edits).length;
   const save = async () => {
     const body = Object.fromEntries(Object.entries(edits).map(([k, v]) => [k, v === data.defaults[k] ? null : v]));
-    if (await act(() => api('/texts', { method: 'PUT', body }), 'Messages saved')) { setEdits({}); reload(); }
+    if (await act(() => api(`/texts?lang=${lang}`, { method: 'PUT', body }), 'Messages saved')) { setEdits({}); reload(); }
   };
   const keys = (q ? Object.values(data.groups).flat() : data.groups[group]).filter((k) => !q || `${k} ${value(k)}`.toLowerCase().includes(q.toLowerCase()));
   const groups = Object.keys(data.groups).filter((g) => g === 'General' || (g === 'Ordering' && biz.modules.includes('ordering')) || (g === 'Booking' && biz.modules.includes('booking')) || (g === 'Enquiry'));
   return html`<${Page} title="Bot messages" subtitle="Change any word the bot says. Leave a message as it is to use the default."
     actions=${html`<${AsyncButton} variant="primary" disabled=${!changed} onClick=${save}>💾 Save ${changed || ''} change${changed === 1 ? '' : 's'}<//>`}>
     <${Alert}>Words in <code>{curly}</code> braces are filled in automatically (e.g. <code>{business}</code>, <code>{total}</code>, <code>{date}</code>) – keep them. Use <code>*bold*</code> and <code>_italic_</code> like in WhatsApp. Button labels must be <b>20 characters or less</b>, list items 24.<//>
-    <div class="toolbar"><input class="search" type="search" placeholder="Search all messages…" aria-label="Search messages" value=${q} onInput=${(e) => setQ(e.target.value)} /></div>
+    <div class="toolbar"><input class="search" type="search" placeholder="Search all messages…" aria-label="Search messages" value=${q} onInput=${(e) => setQ(e.target.value)} />
+      <label class="row gap small">Language <select aria-label="Language" value=${lang} onChange=${(e) => { if (!changed || confirm('Discard unsaved changes?')) { setEdits({}); setLang(e.target.value); } }} style="width:auto">
+        ${Object.entries(data.languages).map(([k, l]) => html`<option value=${k}>${l}${k === data.primary ? ' (main)' : ''}</option>`)}</select></label></div>
     ${!q && html`<${Tabs} active=${group} onChange=${setGroup} tabs=${groups.map((g) => ({ key: g, label: g }))} />`}
     <${Card}>
       ${keys.map((k) => {

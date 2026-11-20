@@ -9,6 +9,7 @@ import { hmacHex, safeEqual } from '../lib/crypto.js';
 import { getBusinessByPhoneNumberId, waCredentials } from '../services/business.js';
 import { handleIncoming } from '../engine/index.js';
 import { applyStatus, clientFor } from '../whatsapp/sender.js';
+import { recordEcho } from '../engine/index.js';
 
 const r = express.Router();
 
@@ -49,6 +50,8 @@ r.post('/webhook', (req, res) => {
       const b = getBusinessByPhoneNumberId(value.metadata?.phone_number_id);
       if (!b) { if (value.messages) log.warn('message for unknown phone_number_id', { id: value.metadata?.phone_number_id }); continue; }
       for (const st of value.statuses || []) { try { applyStatus(st); } catch (e) { log.error('status update failed', e); } }
+      // Same number used in the WhatsApp Business app ("coexistence"): the owner typed a reply on the phone
+      for (const echo of value.message_echoes || []) { try { recordEcho(b, echo); } catch (e) { log.error('echo failed', e); } }
       for (const msg of value.messages || []) {
         if (!run('INSERT INTO processed_events (id) VALUES (?) ON CONFLICT DO NOTHING', msg.id).changes) continue; // duplicate
         const profileName = value.contacts?.find((c) => c.wa_id === msg.from)?.profile?.name;

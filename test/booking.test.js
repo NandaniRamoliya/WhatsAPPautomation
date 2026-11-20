@@ -5,7 +5,8 @@ import { runDueJobs } from '../src/services/jobs.js';
 import { book, slotsFor, getService, completeAppointment, SlotTakenError } from '../src/services/appointments.js';
 import { addDays, todayIn } from '../src/lib/time.js';
 
-const tomorrow = (biz) => addDays(todayIn(biz.timezone), 1);
+// 3 days ahead: reminders (24h / 2h before) are always in the future, whatever time the tests run
+const tomorrow = (biz) => addDays(todayIn(biz.timezone), 3);
 
 test('dental: triage -> date -> time -> name -> confirm -> owner alert + reminders', async () => {
   const biz = makeBusiness('dental');
@@ -24,7 +25,7 @@ test('dental: triage -> date -> time -> name -> confirm -> owner alert + reminde
   r = await c.tap(options(r)[1].id); // Swelling
   r = await c.tap(options(r)[0].id); // Today
   const day = findOpt(r, (o) => o.id === `bk:d:${tomorrow(biz)}`);
-  assert.ok(day, 'tomorrow offered');
+  assert.ok(day, 'day offered');
   r = await c.pick(day.id);
   const time = findOpt(r, 'bk:t:');
   assert.ok(time, 'times offered');
@@ -93,7 +94,7 @@ test('reminder -> confirm; reschedule; cancel', async () => {
   assert.equal(db.get('SELECT status FROM appointments WHERE id = ?', appt.id).status, 'CONFIRMED');
 
   r = await c.tap(`bk:rs:${appt.id}`);
-  const newDay = findOpt(r, 'bk:d:');
+  const newDay = findOpt(r, (o) => o.id === `bk:d:${addDays(todayIn(biz.timezone), 4)}`);
   r = await c.pick(newDay.id);
   const t = options(r).filter((o) => o.id.startsWith('bk:t:'))[3];
   r = await c.pick(t.id, t.title);

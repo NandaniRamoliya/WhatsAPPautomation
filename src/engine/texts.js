@@ -4,8 +4,12 @@
 // WhatsApp limits: button titles <= 20 chars, list rows <= 24 chars, list button <= 20 chars.
 
 import { fill } from '../lib/util.js';
+import { hi as hiPack, gu as guPack } from './texts-indic.js';
+import { langOf } from '../services/customers.js';
 
-export const LANGUAGES = { en: 'English', hinglish: 'Hinglish (Hindi in English letters)' };
+export const LANGUAGES = { en: 'English', hinglish: 'Hinglish (Hindi in English letters)', hi: 'हिन्दी – Hindi', gu: 'ગુજરાતી – Gujarati' };
+/** How each language names itself (shown to customers in the language picker). */
+export const LANGUAGE_SELF = { en: 'English', hinglish: 'Hinglish', hi: 'हिन्दी', gu: 'ગુજરાતી' };
 
 const en = {
   // ---------- General ----------
@@ -43,6 +47,13 @@ const en = {
   error: 'Sorry, something went wrong on our side. Please try again in a moment.',
   cancelled_flow: 'No problem, cancelled.',
   pick_option: 'Please tap one of the options above 👆',
+  menu_language: '🌐 Language',
+  menu_language_desc: 'Change chat language',
+  choose_language: '🌐 Please choose your language',
+  language_button: 'Languages',
+  language_set: '✅ Done! I will talk to you in English.',
+  ai_unsure: 'I am not fully sure about that. Would you like to talk to our team?',
+  btn_more_info: 'ℹ️ More info',
 
   // ---------- Ordering ----------
   choose_category: 'What would you like to order? Pick a category 👇',
@@ -82,10 +93,14 @@ const en = {
   btn_pay_cod_pickup: '💵 Pay at pickup',
   btn_pay_upi: '📱 UPI',
   btn_pay_online: '💳 Pay online',
+  btn_pay_stripe: '💳 Card payment',
+  btn_pay_link: '🔗 Pay online',
   pay_cod: 'Cash on delivery',
   pay_cod_pickup: 'Pay at pickup',
   pay_upi: 'UPI',
   pay_online: 'Online',
+  pay_stripe: 'Card',
+  pay_link: 'Online link',
   fulfil_delivery: '🚚 Delivery to: {address}',
   fulfil_pickup: '🏪 Pickup from: {address}',
   order_placed: '🎉 Order *#{order_no}* confirmed!\n{lines}\n*Total: {total}* ({payment})\n{fulfilment}\n⏱️ Expected: {eta}',
@@ -171,6 +186,11 @@ const en = {
 
 const hinglish = {
   ...en,
+  language_set: '✅ Ho gaya! Ab main Hinglish mein baat karunga.',
+  menu_language: '🌐 Bhasha',
+  menu_language_desc: 'Chat ki bhasha badlein',
+  choose_language: '🌐 Apni bhasha chunein',
+  ai_unsure: 'Is baare mein mujhe pakka pata nahi hai. Kya aap hamari team se baat karna chahenge?',
   welcome: 'Namaste{name_sp}! 🙏 *{business}* mein aapka swagat hai.\nBataiye, hum aapki kya madad karein?',
   menu_list_button: 'Menu kholein',
   menu_order: '🛒 Order karein',
@@ -295,7 +315,10 @@ const hinglish = {
   lead_done: 'Dhanyavaad{name_sp}! 🙏 Aapki details note kar li hain. Team jaldi contact karegi.',
 };
 
-export const DEFAULT_TEXTS = { en, hinglish };
+const hi = { ...en, ...hiPack };
+const gu = { ...en, ...guPack };
+
+export const DEFAULT_TEXTS = { en, hinglish, hi, gu };
 
 /** Keys grouped for the dashboard editor. */
 export const TEXT_GROUPS = {
@@ -305,9 +328,25 @@ export const TEXT_GROUPS = {
   Enquiry: Object.keys(en).slice(Object.keys(en).indexOf('faq_choose')),
 };
 
-/** Resolve a text for a business: override -> language default -> English. */
-export function text(biz, key, vars = {}) {
-  const lang = DEFAULT_TEXTS[biz?.language] ? biz.language : 'en';
-  const tpl = biz?.texts?.[key] ?? DEFAULT_TEXTS[lang][key] ?? en[key] ?? key;
+/**
+ * Resolve a text: per-language override -> language pack -> English.
+ * lang = the customer's chosen language (optional); defaults to the business language.
+ * Overrides for the business language live in biz.texts[key]; for other languages in biz.texts['@<lang>'][key].
+ */
+export function text(biz, key, vars = {}, lang) {
+  const primary = DEFAULT_TEXTS[biz?.language] ? biz.language : 'en';
+  const L = lang && DEFAULT_TEXTS[lang] ? lang : primary;
+  const override = L === primary ? biz?.texts?.[key] : biz?.texts?.[`@${L}`]?.[key];
+  const tpl = override ?? DEFAULT_TEXTS[L][key] ?? en[key] ?? key;
   return fill(tpl, { business: biz?.name, ...vars }).replace(/\n{3,}/g, '\n\n').trim();
 }
+
+/** Languages a business offers to customers (primary first). */
+export function offeredLanguages(biz) {
+  const primary = DEFAULT_TEXTS[biz?.language] ? biz.language : 'en';
+  const extra = biz?.settings?.language_choice?.enabled ? (biz.settings.language_choice.languages || []) : [];
+  return [...new Set([primary, ...extra.filter((l) => DEFAULT_TEXTS[l])])];
+}
+
+/** Text in the language of a specific customer (for scheduled / dashboard-triggered messages). */
+export const textFor = (biz, phone, key, vars = {}) => text(biz, key, vars, langOf(biz.id, phone));

@@ -26,12 +26,15 @@ export const orderingFields = [
   { key: 'settings.ordering.free_delivery_above', label: 'Free delivery above', type: 'money', help: '0 = never free', hidden: (v) => !v.settings.ordering.delivery },
   { key: 'settings.ordering.min_order', label: 'Minimum order value', type: 'money', help: '0 = no minimum' },
   { key: 'settings.ordering.eta_text', label: 'Delivery time shown to customers', placeholder: '30-45 minutes' },
-  { key: 'settings.ordering.payment_modes', label: 'Payment options', type: 'checks', wide: true, options: [{ value: 'cod', label: '💵 Cash on delivery / at pickup' }, { value: 'upi', label: '📱 UPI (QR + app link, you confirm)' }, { value: 'online', label: '💳 Online via Razorpay (auto-confirms)' }] },
+  { key: 'settings.ordering.payment_modes', label: 'Payment options', type: 'checks', wide: true, options: [{ value: 'cod', label: '💵 Cash on delivery / at pickup' }, { value: 'upi', label: '📱 UPI (QR + app link, you confirm)' }, { value: 'online', label: '💳 Razorpay (India, auto-confirms)' }, { value: 'stripe', label: '🌍 Stripe card payment (international, auto-confirms)' }, { value: 'link', label: '🔗 Any payment link – PayPal.me, Instamojo… (you confirm)' }] },
   { key: 'settings.ordering.upi_id', label: 'UPI ID', placeholder: 'shopname@okicici', hidden: (v) => !v.settings.ordering.payment_modes?.includes('upi') },
   { key: 'settings.ordering.upi_name', label: 'Name shown in UPI app', hidden: (v) => !v.settings.ordering.payment_modes?.includes('upi') },
   { key: 'settings.ordering.razorpay_key_id', label: 'Razorpay Key ID', placeholder: 'rzp_live_…', hidden: (v) => !v.settings.ordering.payment_modes?.includes('online') },
   { key: 'secrets.razorpay_key_secret', label: 'Razorpay Key Secret', type: 'password', help: 'Leave empty to keep the saved one.', hidden: (v) => !v.settings.ordering.payment_modes?.includes('online') },
   { key: 'secrets.razorpay_webhook_secret', label: 'Razorpay Webhook Secret', type: 'password', help: 'Leave empty to keep the saved one.', hidden: (v) => !v.settings.ordering.payment_modes?.includes('online') },
+  { key: 'secrets.stripe_secret_key', label: 'Stripe secret key', type: 'password', help: 'Stripe Dashboard → Developers → API keys (sk_live_…). Leave empty to keep the saved one.', hidden: (v) => !v.settings.ordering.payment_modes?.includes('stripe') },
+  { key: 'secrets.stripe_webhook_secret', label: 'Stripe webhook signing secret', type: 'password', help: 'whsec_… from the webhook you create (URL shown below). Leave empty to keep the saved one.', hidden: (v) => !v.settings.ordering.payment_modes?.includes('stripe') },
+  { key: 'settings.ordering.pay_link_template', label: 'Payment link', wide: true, placeholder: 'https://paypal.me/yourshop/{amount}', help: 'Use {amount}, {order_no}, {currency}, {phone} – they are filled per order.', hidden: (v) => !v.settings.ordering.payment_modes?.includes('link') },
   { key: 'settings.ordering.ask_notes', label: 'Ask for special instructions', type: 'toggle', help: 'e.g. "less spicy", cake message' },
   { key: 'settings.ordering.show_images', label: 'Show product photos', type: 'toggle', help: 'Sends the photo before asking quantity (needs Photo URL on products).' },
   { key: 'settings.ordering.accept_prescriptions', label: 'Accept photos / prescriptions during ordering', type: 'toggle', help: 'For pharmacies: photos are attached to the order and flagged in Chats.' },
@@ -139,7 +142,7 @@ export function Settings() {
     <${Tabs} active=${tab} onChange=${(t) => { setTab(t); history.replaceState(null, '', `#/settings?tab=${t}`); }} tabs=${[
       { key: 'business', label: 'Business' }, { key: 'hours', label: 'Opening hours' }, { key: 'features', label: 'Features' },
       has('ordering') && { key: 'ordering', label: 'Ordering & payments' }, has('booking') && { key: 'booking', label: 'Appointments' },
-      has('enquiry') && { key: 'enquiry', label: 'Enquiry form' }, { key: 'whatsapp', label: 'WhatsApp' }, { key: 'ai', label: 'AI' },
+      has('enquiry') && { key: 'enquiry', label: 'Enquiry form' }, { key: 'languages', label: 'Languages' }, { key: 'whatsapp', label: 'WhatsApp' },
       canEdit && { key: 'team', label: 'Team' }, { key: 'account', label: 'My account' },
     ]} />
     ${tab === 'business' && html`<${Card}><${FormFields} fields=${businessFields(biz.meta)} value=${v} onChange=${setV} />${saveBar}<//>`}
@@ -160,7 +163,8 @@ export function Settings() {
       <${Toggle} checked=${v.settings.notify.staff_whatsapp} label="Send booking alerts to the staff member's WhatsApp" onChange=${(x) => setV({ ...v, settings: { ...v.settings, notify: { ...v.settings.notify, staff_whatsapp: x } } })} />
     </div>${saveBar}<//>`}
     ${tab === 'ordering' && html`<${Card}><${FormFields} fields=${orderingFields} value=${v} onChange=${setV} />
-      ${v.settings.ordering.payment_modes?.includes('online') && links.data && html`<div style="margin-top:12px"><${Copy} label="Razorpay webhook URL" value=${links.data.razorpayWebhook} /></div>`}${saveBar}<//>`}
+      ${v.settings.ordering.payment_modes?.includes('online') && links.data && html`<div style="margin-top:12px"><${Copy} label="Razorpay webhook URL" value=${links.data.razorpayWebhook} /></div>`}
+      ${v.settings.ordering.payment_modes?.includes('stripe') && links.data && html`<div style="margin-top:12px"><${Copy} label="Stripe webhook URL" value=${links.data.stripeWebhook} /><p class="muted small">Stripe → Developers → Webhooks → Add endpoint with this URL, event <b>checkout.session.completed</b>.</p></div>`}${saveBar}<//>`}
     ${tab === 'booking' && html`<div>
       <${Card} title="Booking rules"><${FormFields} fields=${bookingFields} value=${v} onChange=${setV} /><//>
       <${Card} title="Reminders before the appointment"><${Reminders} value=${v.settings.booking.reminders} onChange=${(r) => setV({ ...v, settings: { ...v.settings, booking: { ...v.settings.booking, reminders: r } } })} /><//>
@@ -172,13 +176,13 @@ export function Settings() {
       <${QuestionsEditor} hint="Asked one by one when a customer taps 'Send enquiry'. Use the label 'name' to capture their name. Answers appear in Enquiries and are sent to you."
         value=${v.settings.enquiry.lead_questions} onChange=${(q) => setV({ ...v, settings: { ...v.settings, enquiry: { ...v.settings.enquiry, lead_questions: q } } })} />${saveBar}<//>`}
     ${tab === 'whatsapp' && html`<${WhatsAppTab} biz=${biz} reloadBiz=${reloadBiz} />`}
-    ${tab === 'ai' && html`<${Card} title="AI understanding (optional)">
-      ${links.data && !links.data.aiAvailable && html`<${Alert} tone="warn">AI is not available on this server: the developer must set <code>ANTHROPIC_API_KEY</code> in the .env file.<//>`}
-      <p class="muted">Lets customers type naturally – "2 kilo aata aur 1 maggi bhej do" or "are you open on Sunday?". The AI only <b>suggests</b>: items must exist in your catalogue, prices always come from your catalogue, and answers come only from your business details and FAQs.</p>
+    ${tab === 'languages' && html`<${Card} title="Languages your customers can choose">
+      <p class="muted">The bot's main language is set in <b>Business → Bot language</b>. Turn this on to let every customer pick their own language – the whole conversation, reminders and updates then use it. Edit any text per language in <a href="#/messages">Bot messages</a>. (The AI assistant always replies in the language the customer writes in.)</p>
       <div class="col">
-        <${Toggle} checked=${v.settings.ai.enabled} label="Turn on AI" onChange=${(x) => setV({ ...v, settings: { ...v.settings, ai: { ...v.settings.ai, enabled: x } } })} />
-        <${Toggle} checked=${v.settings.ai.order_parsing} label="Understand typed orders" onChange=${(x) => setV({ ...v, settings: { ...v.settings, ai: { ...v.settings.ai, order_parsing: x } } })} />
-        <${Toggle} checked=${v.settings.ai.answer_questions} label="Answer free-form questions from your FAQs & details" onChange=${(x) => setV({ ...v, settings: { ...v.settings, ai: { ...v.settings.ai, answer_questions: x } } })} />
+        <${Toggle} checked=${v.settings.language_choice.enabled} label="Let customers choose their language" help='Adds "🌐 Language" to the menu; customers can also type "language".' onChange=${(x) => setV({ ...v, settings: { ...v.settings, language_choice: { ...v.settings.language_choice, enabled: x } } })} />
+        <${Field} f=${{ key: 'langs', label: 'Languages offered', type: 'checks', options: Object.entries(biz.meta.languages).map(([value, label]) => ({ value, label })) }}
+          value=${v.settings.language_choice.languages} onChange=${(x) => setV({ ...v, settings: { ...v.settings, language_choice: { ...v.settings.language_choice, languages: x } } })} />
+        <${Toggle} checked=${v.settings.language_choice.ask_first} label="Ask new customers to choose a language on their first message" onChange=${(x) => setV({ ...v, settings: { ...v.settings, language_choice: { ...v.settings.language_choice, ask_first: x } } })} />
       </div>${saveBar}<//>`}
     ${tab === 'team' && html`<${Team} />`}
     ${tab === 'account' && html`<${Account} />`}

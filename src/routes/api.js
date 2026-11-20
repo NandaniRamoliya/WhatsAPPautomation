@@ -19,6 +19,9 @@ import {
 } from '../services/appointments.js';
 import { schedule, runDueJobs } from '../services/jobs.js';
 import { broadcastAudience } from '../services/broadcasts.js';
+import * as KB from '../services/knowledge.js';
+import * as INT from '../services/integrations.js';
+import { aiAvailable, tryQuestion } from '../services/ai.js';
 import { ensureCustomer } from '../services/customers.js';
 import { resumeBot, pauseBot } from '../engine/session.js';
 import { handleIncoming } from '../engine/index.js';
@@ -108,11 +111,29 @@ r.use('/admin', admin);
 r.use(business);
 
 // ======================= BUSINESS & SETTINGS =======================
-const SECRET_SETTINGS = [['ordering', 'razorpay_key_secret_enc'], ['ordering', 'razorpay_webhook_secret_enc']];
+// Secret name (as sent by the dashboard in body.secrets) -> encrypted settings path
+const SECRET_SETTINGS = {
+  razorpay_key_secret: 'ordering.razorpay_key_secret_enc',
+  razorpay_webhook_secret: 'ordering.razorpay_webhook_secret_enc',
+  stripe_secret_key: 'ordering.stripe_secret_key_enc',
+  stripe_webhook_secret: 'ordering.stripe_webhook_secret_enc',
+  webhook_secret: 'integrations.webhook.secret_enc',
+  hubspot_token: 'integrations.hubspot.token_enc',
+  airtable_token: 'integrations.airtable.token_enc',
+};
+const parentOf = (obj, path, create = false) => {
+  const keys = path.split('.');
+  let cur = obj;
+  for (const k of keys.slice(0, -1)) { if (!cur[k] || typeof cur[k] !== 'object') { if (!create) return null; cur[k] = {}; } cur = cur[k]; }
+  return [cur, keys.at(-1)];
+};
 
 function publicBusiness(biz) {
   const settings = structuredClone(biz.settings);
-  for (const [g, k] of SECRET_SETTINGS) { settings[g][k.replace('_enc', '_set')] = Boolean(settings[g][k]); delete settings[g][k]; }
+  for (const path of Object.values(SECRET_SETTINGS)) {
+    const pr = parentOf(settings, path);
+    if (pr) { const [o, k] = pr; o[k.replace('_enc', '_set')] = Boolean(o[k]); delete o[k]; }
+  }
   return {
     id: biz.id, slug: biz.slug, name: biz.name, preset: biz.preset, modules: biz.modules, language: biz.language, timezone: biz.timezone,
     currency: biz.currency, owner_phone: biz.owner_phone, owner_email: biz.owner_email, contact_phone: biz.contact_phone, address: biz.address,
@@ -144,11 +165,16 @@ r.put('/business', role('owner', 'superadmin'), (req, res) => {
   if (b.settings) {
     const raw = JSON.parse(get('SELECT settings FROM businesses WHERE id = ?', req.biz.id).settings || '{}');
     const incoming = structuredClone(b.settings);
-    for (const [g, k] of SECRET_SETTINGS) { if (incoming[g]) { delete incoming[g][k]; delete incoming[g][k.replace('_enc', '_set')]; } }
+    for (const path of Object.values(SECRET_SETTINGS)) {
+      const pr = parentOf(incoming, path);
+      if (pr) { const [o, k] = pr; delete o[k]; delete o[k.replace('_enc', '_set')]; }
+    }
     const merged = deepMerge(raw, incoming);
-    for (const [g, k] of SECRET_SETTINGS) {
-      const plain = b.secrets?.[k.replace('_enc', '')];
-      if (plain !== undefined) { merged[g] = merged[g] || {}; merged[g][k] = plain ? encrypt(plain) : ''; }
+    for (const [name, path] of Object.entries(SECRET_SETTINGS)) {
+      const plain = b.secrets?.[name];
+      if (plain === undefined) continue;
+      const [o, k] = parentOf(merged, path, true);
+      o[k] = plain ? encrypt(String(plain).trim()) : '';
     }
     patch.settings = merged;
   }
@@ -217,7 +243,7 @@ r.get('/links', (req, res) => {
   ok(res, {
     webhookUrl: `${config.publicUrl}/webhook`, verifyToken: config.verifyToken, publicUrl: config.publicUrl,
     waLink: link, shortLink: `${config.publicUrl}/q/${req.biz.slug}`, qrPng: link ? `${config.publicUrl}/q/${req.biz.slug}/qr.png` : '',
-    razorpayWebhook: `${config.publicUrl}/webhooks/razorpay/${req.biz.id}`, graphVersion: config.graphVersion,
+    razorpayWebhook: `${config.publicUrl}/webhooks/razorpay/${req.biz.id}`, stripeWebhook: `${config.publicUrl}/webhooks/stripe/${req.biz.id}`, graphVersion: config.graphVersion,
     aiAvailable: Boolean(config.anthropicKey),
   });
 });
@@ -275,6 +301,8 @@ r.get('/stats', (req, res) => {
       faqs: Boolean(get('SELECT 1 FROM faqs WHERE business_id = ? LIMIT 1', b.id)),
       tested: Boolean(get(`SELECT 1 FROM messages WHERE business_id = ? AND phone LIKE 'sim%' LIMIT 1`, b.id)),
       templates: Object.values(b.settings.templates || {}).some((t) => t.name),
+      knowledge: aiAvailable() ? Boolean(get('SELECT 1 FROM kb_sources WHERE business_id = ? LIMIT 1', b.id) && b.settings.ai.enabled) : null,
+      menu: Boolean(get('SELECT 1 FROM quick_replies WHERE business_id = ? LIMIT 1', b.id)),
       live: Boolean(get(`SELECT 1 FROM messages WHERE business_id = ? AND direction = 'in' AND phone NOT LIKE 'sim%' LIMIT 1`, b.id)),
     },
   });
@@ -294,7 +322,7 @@ function crud(path, table, fields, { orderBy = 'sort, id', json = [], beforeSave
     for (const [k, type] of Object.entries(fields)) {
       if (body[k] === undefined) continue;
       const v = body[k];
-      out[k] = type === 'int' ? int(v) : type === 'bool' ? bool(v) : type === 'json' ? JSON.stringify(v ?? null) : v === null ? null : String(v).trim();
+      out[k] = type === 'num' ? (v === '' || v === null ? null : Number(v)) : type === 'int' ? int(v) : type === 'bool' ? bool(v) : type === 'json' ? JSON.stringify(v ?? null) : v === null ? null : String(v).trim();
     }
     return out;
   };
@@ -328,6 +356,16 @@ crud('services', 'services', { name: 'text', description: 'text', category: 'tex
 crud('staff', 'staff', { name: 'text', title: 'text', phone: 'text', service_ids: 'json', hours: 'json', active: 'bool', sort: 'int' },
   { json: ['service_ids', 'hours'], beforeSave: (d, q, n) => { required('name')(d, q, n); if (d.phone) d.phone = normalizePhone(d.phone); } });
 crud('faqs', 'faqs', { question: 'text', answer: 'text', keywords: 'text', active: 'bool', sort: 'int' }, { beforeSave: required('question', 'answer') });
+const QR_TYPES = ['text', 'link', 'image', 'document', 'location', 'flow'];
+crud('quick-replies', 'quick_replies', {
+  title: 'text', description: 'text', keywords: 'text', reply_type: 'text', body: 'text', url: 'text', button_label: 'text',
+  latitude: 'num', longitude: 'num', flow_target: 'text', show_in_menu: 'bool', active: 'bool', sort: 'int',
+}, { beforeSave: (d, q, n) => {
+  required('title')(d, q, n);
+  if (d.reply_type !== undefined && !QR_TYPES.includes(d.reply_type)) throw new HttpError(400, 'Unknown reply type');
+  if (['link', 'image', 'document'].includes(d.reply_type) && d.url && !/^https:\/\//.test(d.url)) throw new HttpError(400, 'Links must start with https://');
+  if (d.reply_type === 'location' && (d.latitude == null || d.longitude == null)) throw new HttpError(400, 'Location needs latitude and longitude');
+} });
 crud('time-off', 'time_off', { staff_id: 'int', date_from: 'text', date_to: 'text', reason: 'text' }, { orderBy: 'date_from DESC', beforeSave: required('date_from', 'date_to') });
 
 // Catalogue CSV import / export
@@ -610,19 +648,73 @@ r.get('/media/:id', async (req, res) => {
   res.type(mime || 'application/octet-stream').set('Cache-Control', 'private, max-age=3600').send(buffer);
 });
 
+// ======================= KNOWLEDGE BASE (AI) =======================
+r.get('/knowledge', (req, res) => ok(res, { sources: KB.listSources(req.biz.id), stats: KB.stats(req.biz.id), limits: KB.LIMITS, aiAvailable: aiAvailable() }));
+r.get('/knowledge/:id', (req, res) => {
+  const src = KB.getSource(req.biz.id, req.params.id);
+  if (!src) throw new HttpError(404, 'Not found');
+  ok(res, { source: src });
+});
+r.post('/knowledge', (req, res) => ok(res, { source: KB.addSource(req.biz.id, { title: req.body.title || 'Notes', kind: 'text', content: req.body.content }) }));
+r.post('/knowledge/file', async (req, res) => {
+  const { filename, mime, base64, title } = req.body || {};
+  const content = await KB.extractFile({ filename, mime, base64 });
+  ok(res, { source: KB.addSource(req.biz.id, { title: title || filename, kind: 'file', source: filename, content }) });
+});
+r.post('/knowledge/url', async (req, res) => {
+  const page = await KB.fetchUrl(String(req.body.url || '').trim());
+  ok(res, { source: KB.addSource(req.biz.id, { title: req.body.title || page.title || req.body.url, kind: 'url', source: req.body.url, content: page.text }) });
+});
+r.put('/knowledge/:id', (req, res) => ok(res, { source: KB.updateSource(req.biz.id, req.params.id, req.body || {}) }));
+r.delete('/knowledge/:id', (req, res) => { KB.deleteSource(req.biz.id, req.params.id); ok(res); });
+r.post('/knowledge/search', (req, res) => ok(res, { passages: KB.search(req.biz.id, req.body.q || '', 6) }));
+r.post('/ai/try', async (req, res) => {
+  if (!aiAvailable()) throw new HttpError(400, 'AI is not available on this server: ANTHROPIC_API_KEY is not set');
+  const q = String(req.body.question || '').trim();
+  if (!q) throw new HttpError(400, 'Type a question');
+  const out = await tryQuestion(req.biz, q);
+  if (!out) throw new HttpError(502, 'The AI did not answer. Check the API key / try again.');
+  ok(res, { result: out });
+});
+
+// ======================= INTEGRATIONS =======================
+r.get('/integrations', (req, res) => {
+  const pub = publicBusiness(req.biz).settings.integrations;
+  ok(res, {
+    config: pub, events: INT.EVENTS, log: INT.recentLog(req.biz.id), sheetsScript: INT.sheetsScript(req.biz.settings.integrations?.sheets?.token || ''),
+    stripeWebhook: `${config.publicUrl}/webhooks/stripe/${req.biz.id}`,
+  });
+});
+r.post('/integrations/test', role('owner', 'superadmin'), async (req, res) => {
+  const target = req.body.target;
+  if (!INT.TARGETS.includes(target)) throw new HttpError(400, 'Unknown integration');
+  try {
+    const r0 = await INT.deliver(req.biz, target, INT.testPayload(req.biz));
+    ok(res, { result: r0 });
+  } catch (e) {
+    throw new HttpError(400, `Test failed: ${e.message}`);
+  }
+});
+
 // ======================= BOT TEXTS =======================
-r.get('/texts', (req, res) => ok(res, {
-  groups: TEXT_GROUPS, defaults: DEFAULT_TEXTS[req.biz.language] || DEFAULT_TEXTS.en, overrides: req.biz.texts, language: req.biz.language,
-}));
+const textLang = (req) => (DEFAULT_TEXTS[req.query.lang] ? req.query.lang : DEFAULT_TEXTS[req.biz.language] ? req.biz.language : 'en');
+const overridesFor = (biz, lang) => (lang === biz.language ? Object.fromEntries(Object.entries(biz.texts || {}).filter(([k]) => !k.startsWith('@'))) : biz.texts?.[`@${lang}`] || {});
+
+r.get('/texts', (req, res) => {
+  const lang = textLang(req);
+  ok(res, { groups: TEXT_GROUPS, defaults: DEFAULT_TEXTS[lang], overrides: overridesFor(req.biz, lang), language: lang, primary: req.biz.language, languages: LANGUAGES });
+});
 
 r.put('/texts', (req, res) => {
-  const texts = { ...req.biz.texts };
+  const lang = textLang(req);
+  const all = structuredClone(req.biz.texts || {});
+  const target = lang === req.biz.language ? all : (all[`@${lang}`] = all[`@${lang}`] || {});
   for (const [k, v] of Object.entries(req.body || {})) {
     if (!(k in DEFAULT_TEXTS.en)) continue;
-    if (v === null || v === '') delete texts[k]; else texts[k] = String(v).slice(0, 2000);
+    if (v === null || v === '') delete target[k]; else target[k] = String(v).slice(0, 2000);
   }
-  saveBusiness(req.biz.id, { texts });
-  ok(res, { overrides: texts });
+  saveBusiness(req.biz.id, { texts: all });
+  ok(res, { overrides: overridesFor(getBusiness(req.biz.id), lang) });
 });
 
 // ======================= TEMPLATES =======================

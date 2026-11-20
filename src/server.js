@@ -18,7 +18,7 @@ app.disable('x-powered-by');
 app.set('trust proxy', 1); // behind nginx / Render / Railway
 
 // Keep the raw body: needed to verify Meta + Razorpay signatures byte-for-byte.
-app.use(express.json({ limit: '5mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
+app.use(express.json({ limit: '16mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
 
 app.use((req, res, next) => {
   res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'same-origin', 'X-Frame-Options': 'SAMEORIGIN' });

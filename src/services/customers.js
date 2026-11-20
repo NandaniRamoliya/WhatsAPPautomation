@@ -33,8 +33,11 @@ export function addTags(customerId, tags) {
 }
 
 export const setCustomerField = (customerId, field, value) => {
-  if (!['name', 'address', 'opted_in', 'marketing_opt_in', 'last_order_at', 'last_visit_at', 'notes'].includes(field)) throw new Error('bad field');
+  if (!['name', 'address', 'opted_in', 'marketing_opt_in', 'last_order_at', 'last_visit_at', 'notes', 'language'].includes(field)) throw new Error('bad field');
   run(`UPDATE customers SET ${field} = ? WHERE id = ?`, value, customerId);
 };
 
 export const firstName = (name) => String(name || '').trim().split(/\s+/)[0] || '';
+
+/** The language a customer chose (null = business default). */
+export const langOf = (bizId, phone) => get('SELECT language FROM customers WHERE business_id = ? AND phone = ?', bizId, phone)?.language || null;

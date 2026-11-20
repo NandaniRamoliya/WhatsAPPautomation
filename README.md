@@ -18,16 +18,20 @@ Bot:      ✅ Booking ho gayi! Toothache – Dr. Mehta · 📅 Sat, 21 Nov, 10:3
 
 | | |
 |---|---|
-| 🛒 **Ordering** | Catalogue with categories & search, cart, delivery or pickup, address or 📍 location, notes, **COD / UPI QR page / Razorpay links**, order status updates, reorder, abandoned-cart nudge, prescription photos, native WhatsApp catalogue orders |
+| 🛒 **Ordering** | Catalogue with categories & search, cart, delivery or pickup, address or 📍 location, notes, **COD / UPI QR page / Razorpay / Stripe card checkout / any payment link (PayPal.me…)**, order status updates, reorder, abandoned-cart nudge, prescription photos, native WhatsApp catalogue orders |
 | 📅 **Appointments** | Services & staff calendars, triage questions, race-safe slot booking, holidays/leave, **24h + 2h reminders** with confirm/reschedule/cancel buttons, aftercare & prescription message, **day-3 check-in → Google review or team alert**, recalls (6-month cleaning, monthly haircut…) |
 | ❓ **Enquiries** | FAQ menu + automatic answers to typed questions (keywords), lead form with your own questions |
+| 🤖 **AI assistant (RAG)** | Answers any question from the business's own documents, website pages, price lists, catalogue and FAQs – in the customer's language; understands typed orders ("2 kilo aata aur 1 maggi") and booking requests; chat memory; owner instructions & tone; "Try a question" box |
+| 🧩 **Menu & quick replies** | No-code custom menu buttons and keyword triggers that reply with text, link buttons, images, PDFs (price lists), map locations or jump into any flow |
+| 🌐 **Languages** | English, Hinglish, **Hindi** and **Gujarati** built in; each customer can pick their language – reminders and updates follow it; every text editable per language |
+| 🔌 **Integrations** | Google Sheets (copy-paste Apps Script), HubSpot, Airtable and signed webhooks for n8n / Make / Zapier / any CRM – with retries and a delivery log |
 | 💬 **Inbox** | Every chat, human handoff ("talk to us"), staff replies with automatic bot pause, attachments |
 | 📣 **Growth** | Broadcasts to opted-in customers, one-click Meta template creation, QR code & short link, CSV import of existing customers with automatic recalls |
 | 🧭 **No-code dashboard** | Setup wizard with **12 business presets**, every bot message editable (English + Hinglish), settings in plain language, live sound alerts, mobile friendly, dark mode |
 | 📱 **Simulator** | Test the whole bot in the browser – no Meta account needed – with "fast-forward time" for reminders |
 | 🏢 **Agency mode** | Many clients on one server, each with its own number, data and logins; super-admin console |
-| 🤖 **Optional AI** | Customers can type "2 kilo aata aur 1 maggi" or free questions; Claude proposes, code validates |
-| 🔒 **Production-grade** | Webhook signature check, de-duplication, per-customer ordering, 24h-window & template fallback, encrypted secrets, roles, audit log, backups, 24 automated tests |
+| 📲 **Same number as the phone app** | Supports Meta's WhatsApp Business app + API coexistence: when the owner replies from the phone, the bot steps back for that chat |
+| 🔒 **Production-grade** | Webhook signature check, de-duplication, per-customer ordering, 24h-window & template fallback, encrypted secrets, roles, audit log, backups, 37 automated tests |
 
 Works for **100+ business types** – see [docs/USE_CASES.md](docs/USE_CASES.md).
 
@@ -64,6 +68,7 @@ Full checklist + client requirements form: [docs/CLIENT_ONBOARDING.md](docs/CLIE
 |---|---|
 | 📕 [docs/Developer-Guide.pdf](docs/Developer-Guide.pdf) | **PDF, 46 pages** – from zero to delivering clients: how the code works, every file, new-client playbook, "if this happens, do this", recipes with code, future scope |
 | 📗 [docs/User-Guide.pdf](docs/User-Guide.pdf) | **PDF, 40 pages** – for owners & staff, with screenshots: every screen, playbooks for clinics, marts, cafes, pharmacies, salons, gyms, coaching, services |
+| 💼 [docs/FIVERR_GIG.md](docs/FIVERR_GIG.md) | **Ready-to-paste Fiverr gig** (title, packages, description, FAQ, tags) + delivery checklist per package; gallery images in `docs/fiverr/` |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Business owners & staff (non-technical) – every screen explained |
 | [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) | Developers – architecture, data model, engine, API reference, extending, security, testing |
 | [docs/CLIENT_ONBOARDING.md](docs/CLIENT_ONBOARDING.md) | Agencies – requirements form, delivery checklist, pricing ideas |
@@ -85,12 +90,12 @@ docs/           guides
 ## Tech
 
 Node.js 22 · Express 5 · SQLite (`node:sqlite`, WAL) · WhatsApp Cloud API (Graph) · Preact + htm · optional
-Anthropic Claude for AI. No native modules, no frontend build, no external database.
+Anthropic Claude for AI (structured outputs, prompt caching) · SQLite FTS5 for knowledge search · unpdf for PDF text. No native modules, no frontend build, no external database.
 
 ## Testing
 
 ```bash
-npm test   # 24 tests: ordering, booking, webhook security, API, simulator, AI – no network needed
+npm test   # 37 tests: ordering, booking, AI/RAG, quick replies, languages, integrations, payments, webhooks – no network needed
 ```
 
 ## Important

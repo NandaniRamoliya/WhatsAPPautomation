@@ -2,6 +2,7 @@
 // (configurable questions -> saved lead -> owner alert).
 import { all, get, insert } from '../../db/index.js';
 import { clip } from '../../lib/util.js';
+import { emit } from '../../services/integrations.js';
 
 const faqs = (bizId) => all('SELECT * FROM faqs WHERE business_id = ? AND active = 1 ORDER BY sort, id', bizId);
 const leadQuestions = (biz) => (biz.settings.enquiry?.lead_questions || []).filter((q) => q?.question);
@@ -41,7 +42,7 @@ export const enquiry = {
   },
 };
 
-const words = (s) => String(s).toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter((w) => w.length > 2);
+const words = (s) => String(s).toLowerCase().replace(/[^\p{L}\p{M}\p{N}\s]/gu, ' ').split(/\s+/).filter((w) => w.length > 2);
 const STOP = new Set(['the', 'what', 'are', 'your', 'you', 'how', 'can', 'and', 'for', 'kya', 'hai', 'aap', 'kab', 'kaise', 'does', 'have', 'there', 'with', 'this', 'that']);
 
 export function matchFaq(bizId, textIn) {
@@ -98,7 +99,8 @@ async function saveLeadAnswer(c, value) {
 async function finishLead(c) {
   const answers = c.ctx.lead?.answers || {};
   const name = answers.name || c.customer.name || null;
-  insert('leads', { business_id: c.biz.id, customer_id: c.customer.id, phone: c.phone, name, answers: JSON.stringify(answers) });
+  const leadId = insert('leads', { business_id: c.biz.id, customer_id: c.customer.id, phone: c.phone, name, answers: JSON.stringify(answers) });
+  emit(c.biz, 'lead.created', { id: leadId, phone: c.phone, name, answers });
   c.reset();
   await c.notifyOwner(c.t('owner_new_lead', { name: name || 'Customer', phone: c.phone, answers: Object.entries(answers).map(([k, v]) => `${k}: ${v}`).join('\n') }));
   return c.buttons(c.t('lead_done'), [{ id: 'menu', title: c.t('btn_menu') }]);

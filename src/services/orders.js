@@ -1,12 +1,15 @@
 import { all, get, run, insert, tx, parseJson, now } from '../db/index.js';
 import { randomToken } from '../lib/crypto.js';
 import { money } from '../lib/util.js';
-import { text } from '../engine/texts.js';
+import { text, textFor } from '../engine/texts.js';
 import * as B from '../whatsapp/builders.js';
 import { send } from '../whatsapp/sender.js';
 import { notifyOwner } from './notify.js';
 import { slotTemplate } from './templates.js';
 import { getCustomer, firstName } from './customers.js';
+import { emit } from './integrations.js';
+
+const orderEvent = (biz, order) => emit(biz, 'order.updated', { ...order, name: order.customer_name });
 
 export const ORDER_STATUSES = ['NEW', 'CONFIRMED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'];
 
@@ -62,15 +65,17 @@ export function createOrder(biz, { phone, customerName, cart, fulfilment, addres
   return getOrder(biz.id, id);
 }
 
-export function paymentLabel(biz, order) {
-  if (order.payment_mode === 'cod') return text(biz, order.fulfilment === 'pickup' ? 'pay_cod_pickup' : 'pay_cod');
-  return text(biz, order.payment_mode === 'upi' ? 'pay_upi' : 'pay_online') + (order.payment_status === 'PAID' ? ' ✅' : '');
+const PAY_LABEL = { upi: 'pay_upi', online: 'pay_online', stripe: 'pay_stripe', link: 'pay_link' };
+
+export function paymentLabel(biz, order, lang) {
+  if (order.payment_mode === 'cod') return text(biz, order.fulfilment === 'pickup' ? 'pay_cod_pickup' : 'pay_cod', {}, lang);
+  return text(biz, PAY_LABEL[order.payment_mode] || 'pay_online', {}, lang) + (order.payment_status === 'PAID' ? ' ✅' : '');
 }
 
-export function fulfilmentLine(biz, order) {
+export function fulfilmentLine(biz, order, lang) {
   return order.fulfilment === 'pickup'
-    ? text(biz, 'fulfil_pickup', { address: biz.address || biz.name })
-    : text(biz, 'fulfil_delivery', { address: order.address || '-' });
+    ? text(biz, 'fulfil_pickup', { address: biz.address || biz.name }, lang)
+    : text(biz, 'fulfil_delivery', { address: order.address || '-' }, lang);
 }
 
 export function ownerOrderAlert(biz, order) {
@@ -87,7 +92,8 @@ export async function confirmPayment(biz, orderId, ref = null) {
                        WHERE business_id = ? AND id = ? AND status = 'NEW'`, ref, now(), biz.id, Number(orderId)).changes;
   if (!changed) return false;
   const order = getOrder(biz.id, orderId);
-  await send(biz, order.phone, B.text(text(biz, 'order_paid', {
+  orderEvent(biz, order);
+  await send(biz, order.phone, B.text(textFor(biz, order.phone, 'order_paid', {
     order_no: order.order_no, lines: lineText(biz, order.items), total: money(order.total, biz.currency), eta: biz.settings.ordering.eta_text,
   })), { fallbackTemplate: slotTemplate(biz, 'order_update', [firstName(order.customer_name) || 'there', `Payment received, order #${order.order_no} is confirmed.`]) });
   await ownerOrderAlert(biz, order);
@@ -101,9 +107,10 @@ export async function setOrderStatus(biz, orderId, status, { reason } = {}) {
   if (!order) throw new Error('order not found');
   if (order.status === status) return order;
   run('UPDATE orders SET status = ?, cancel_reason = COALESCE(?, cancel_reason), updated_at = ? WHERE id = ?', status, reason || null, now(), order.id);
-  const msg = text(biz, `order_status_${status}`, {
+  orderEvent(biz, getOrder(biz.id, order.id));
+  const msg = textFor(biz, order.phone, `order_status_${status}`, {
     order_no: order.order_no,
-    cod_note: order.payment_status === 'COD' ? text(biz, 'cod_note', { total: money(order.total, biz.currency) }) : '',
+    cod_note: order.payment_status === 'COD' ? textFor(biz, order.phone, 'cod_note', { total: money(order.total, biz.currency) }) : '',
     reason: reason ? ` ${reason}` : '',
   });
   await send(biz, order.phone, B.text(msg), {
@@ -117,6 +124,7 @@ export async function markPaidManually(biz, orderId) {
   if (!order) throw new Error('order not found');
   if (order.status === 'NEW') return confirmPayment(biz, orderId, 'manual');
   run(`UPDATE orders SET payment_status = 'PAID', payment_ref = COALESCE(payment_ref, 'manual'), updated_at = ? WHERE id = ?`, now(), order.id);
+  orderEvent(biz, getOrder(biz.id, order.id));
   return true;
 }
 

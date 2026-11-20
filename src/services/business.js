@@ -13,6 +13,13 @@ export const DEFAULT_SETTINGS = {
   handoff_pause_hours: 12,           // bot stays quiet this long after "talk to a person"
   menu_style: 'auto',                // auto | buttons | list
   show_menu_after_answer: true,
+  welcome_image_url: '',
+  custom_menu_position: 'bottom',    // where owner-made buttons appear in the main menu: top | bottom             // optional image/logo sent with the first welcome of the day
+  language_choice: {                 // let customers pick their language (menu item + "language" keyword)
+    enabled: false,
+    languages: ['en', 'hi', 'gu'],
+    ask_first: true,                 // ask new customers to pick a language on their first "Hi"
+  },
   notify: {
     owner_whatsapp: true,            // WhatsApp alert to owner_phone on new order/booking/lead/handoff
     staff_whatsapp: true,            // booking alert to the assigned staff member's phone
@@ -23,12 +30,15 @@ export const DEFAULT_SETTINGS = {
     delivery_fee: 2000,              // minor units
     free_delivery_above: 30000,
     min_order: 0,
-    payment_modes: ['cod', 'upi'],   // cod | upi | online (Razorpay)
+    payment_modes: ['cod', 'upi'],   // cod | upi | online (Razorpay) | stripe | link
     upi_id: '',
     upi_name: '',
     razorpay_key_id: '',
     razorpay_key_secret_enc: '',
     razorpay_webhook_secret_enc: '',
+    stripe_secret_key_enc: '',       // Stripe Checkout (international cards, Apple/Google Pay)
+    stripe_webhook_secret_enc: '',
+    pay_link_template: '',           // any payment link, e.g. https://paypal.me/shop/{amount} (manual confirmation)
     eta_text: '30-45 minutes',
     ask_notes: false,
     cart_nudge_minutes: 60,          // remind about an unfinished cart (0 = off)
@@ -56,7 +66,24 @@ export const DEFAULT_SETTINGS = {
       { key: 'requirement', question: 'Please tell us what you are looking for.', options: [] },
     ],
   },
-  ai: { enabled: false, order_parsing: true, answer_questions: true },
+  ai: {
+    enabled: false,
+    order_parsing: true,             // "2 kilo aata aur 1 maggi" -> cart
+    answer_questions: true,          // answers from business info, FAQs, catalogue, knowledge base
+    use_knowledge: true,             // include the Knowledge base documents (RAG)
+    remember_chat: true,             // use the last messages of the chat as context
+    tone: 'friendly',                // friendly | formal | short
+    assistant_name: '',              // e.g. "Riya from Pearl Dental"
+    instructions: '',                // extra rules from the owner ("always mention free delivery above ₹300")
+    handoff_when_unsure: true,       // offer "talk to us" when the AI cannot answer
+  },
+  integrations: {                    // send events to Google Sheets, n8n/Make/Zapier, HubSpot, Airtable
+    events: ['lead.created', 'order.created', 'order.updated', 'appointment.booked', 'appointment.updated', 'handoff.requested', 'feedback.received', 'customer.created'],
+    webhook: { enabled: false, url: '', secret_enc: '' },
+    sheets: { enabled: false, url: '', token: '' },
+    hubspot: { enabled: false, token_enc: '' },
+    airtable: { enabled: false, token_enc: '', base_id: '', table: 'WhatsApp' },
+  },
   // Approved Meta templates for business-initiated messages (outside the 24h window).
   templates: {
     owner_alert: { name: '', lang: 'en' },

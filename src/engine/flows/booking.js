@@ -2,6 +2,7 @@
 // time -> name -> confirm. Also: my appointments, reschedule, cancel, reminder
 // replies and post-visit check-in answers (positive -> review link, negative -> team).
 import { clip } from '../../lib/util.js';
+import { emit } from '../../services/integrations.js';
 import {
   listServices, getService, staffForService, availableDates, slotsFor, book, alertNewBooking, SlotTakenError,
   upcomingFor, getAppointment, cancelAppointment, rescheduleAppointment, setApptStatus, apptVars, slotLabel, dateLabel,
@@ -229,6 +230,7 @@ async function checkinAnswer(c, feeling, id) {
   const a = mine(c, id);
   if (!a) return false;
   const v = apptVars(c.biz, a);
+  emit(c.biz, 'feedback.received', { phone: c.phone, name: a.customer_name, feeling, service: v.service, appointment_id: a.id });
   if (feeling === 'good') {
     const link = c.biz.settings.booking.review_request && c.biz.review_link;
     return c.say(link ? c.t('checkin_good_review', { review_link: link }) : c.t('checkin_good'));

@@ -64,3 +64,66 @@ export function verifyRazorpaySignature(biz, rawBody, signature) {
   if (!secret || !signature) return false;
   return safeEqual(hmacHex(secret, rawBody), signature);
 }
+
+// ---------------- Stripe Checkout (cards, Apple Pay, Google Pay - international) ----------------
+export const stripeEnabled = (biz) => Boolean(biz.settings.ordering.stripe_secret_key_enc);
+
+const ZERO_DECIMAL = new Set(['JPY', 'KRW', 'VND', 'CLP', 'PYG', 'UGX', 'XAF', 'XOF', 'RWF', 'KMF', 'GNF', 'MGA', 'BIF', 'DJF', 'VUV', 'XPF']);
+
+/** Create a Stripe Checkout Session for an order; returns the hosted payment URL. */
+export async function createStripeCheckout(biz, order) {
+  const key = decrypt(biz.settings.ordering.stripe_secret_key_enc);
+  const cur = (biz.currency || 'INR').toUpperCase();
+  const p = new URLSearchParams();
+  p.set('mode', 'payment');
+  p.set('success_url', `${config.publicUrl}/paid/${order.pay_token}`);
+  p.set('cancel_url', `${config.publicUrl}/paid/${order.pay_token}`);
+  p.set('client_reference_id', `${biz.id}-${order.id}`);
+  p.set('line_items[0][quantity]', '1');
+  p.set('line_items[0][price_data][currency]', cur.toLowerCase());
+  p.set('line_items[0][price_data][unit_amount]', String(ZERO_DECIMAL.has(cur) ? Math.round(order.total / 100) : order.total));
+  p.set('line_items[0][price_data][product_data][name]', `Order #${order.order_no} – ${biz.name}`.slice(0, 250));
+  p.set('metadata[business_id]', String(biz.id));
+  p.set('metadata[order_id]', String(order.id));
+  p.set('payment_intent_data[metadata][order_id]', String(order.id));
+  const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+    method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/x-www-form-urlencoded' }, body: p, signal: AbortSignal.timeout(20000),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error?.message || `Stripe error ${res.status}`);
+  return data.url;
+}
+
+/** Verify the Stripe-Signature header (t=...,v1=...) against the raw body, 5 minute tolerance. */
+export function verifyStripeSignature(biz, rawBody, header, nowSec = Math.floor(Date.now() / 1000)) {
+  const secret = decrypt(biz.settings.ordering.stripe_webhook_secret_enc);
+  if (!secret || !header) return false;
+  const parts = Object.fromEntries(String(header).split(',').map((kv) => kv.split('=')).filter((x) => x.length === 2).map(([k, v]) => [k.trim(), v.trim()]));
+  const sigs = String(header).split(',').filter((kv) => kv.trim().startsWith('v1=')).map((kv) => kv.trim().slice(3));
+  const t = Number(parts.t);
+  if (!t || Math.abs(nowSec - t) > 300 || !sigs.length) return false;
+  const expected = hmacHex(secret, `${t}.${rawBody}`);
+  return sigs.some((s) => safeEqual(s, expected));
+}
+
+// ---------------- Generic payment link (PayPal.me, Instamojo, bank page...) ----------------
+export const payLinkEnabled = (biz) => Boolean(biz.settings.ordering.pay_link_template);
+export function payLinkFor(biz, order) {
+  const amount = (order.total / 100).toFixed(2);
+  return biz.settings.ordering.pay_link_template
+    .replace(/\{amount\}/g, amount).replace(/\{order_no\}/g, String(order.order_no))
+    .replace(/\{currency\}/g, biz.currency || 'INR').replace(/\{phone\}/g, order.phone);
+}
+
+/** Small status page shown after card / link payments. */
+export function paidPageHtml(biz, order) {
+  const paid = order.payment_status === 'PAID';
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHtml(biz.name)}</title><style>body{font-family:system-ui,sans-serif;background:#f4f6f5;margin:0;padding:24px;color:#14261c}
+.card{max-width:380px;margin:auto;background:#fff;border-radius:16px;padding:28px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.big{font-size:44px}.muted{color:#5d6b63}</style></head><body><div class="card">
+<div class="big">${paid ? '✅' : '⏳'}</div><h2>${paid ? 'Payment received' : 'Confirming your payment…'}</h2>
+<p class="muted">${escapeHtml(biz.name)} · Order #${order.order_no} · ${money(order.total, biz.currency)}</p>
+<p>${paid ? 'Thank you! Your order confirmation is on WhatsApp.' : 'You will get a confirmation on WhatsApp as soon as the payment is confirmed. You can close this page.'}</p>
+</div></body></html>`;
+}

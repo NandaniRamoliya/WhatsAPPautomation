@@ -20,11 +20,14 @@ import { Simulator } from './pages/simulator.js';
 import { Wizard } from './pages/wizard.js';
 import { Agency } from './pages/agency.js';
 import { Help } from './pages/help.js';
+import { AiAssistant } from './pages/ai.js';
+import { QuickReplies } from './pages/quickreplies.js';
+import { Integrations } from './pages/integrations.js';
 
 const ROUTES = {
   overview: Overview, orders: Orders, appointments: Appointments, inbox: Inbox, customers: Customers, leads: Leads,
   catalogue: Catalogue, services: Services, faqs: Faqs, broadcasts: Broadcasts, messages: BotMessages, templates: Templates,
-  settings: Settings, test: Simulator, setup: Wizard, agency: Agency, help: Help,
+  settings: Settings, test: Simulator, setup: Wizard, agency: Agency, help: Help, ai: AiAssistant, menu: QuickReplies, integrations: Integrations,
 };
 
 function nav(biz, counts) {
@@ -40,12 +43,15 @@ function nav(biz, counts) {
     ['Set up your bot'],
     has('ordering') && ['catalogue', '📦', 'Products'],
     has('booking') && ['services', '🧑‍⚕️', 'Services & staff'],
+    ['ai', '🤖', 'AI assistant'],
+    ['menu', '🧩', 'Menu & quick replies'],
     ['faqs', '❓', 'FAQs'],
     ['messages', '✏️', 'Bot messages'],
     ['test', '📱', 'Test the bot'],
     ['Grow'],
     ['broadcasts', '📣', 'Broadcasts'],
     ['templates', '📄', 'Message templates'],
+    ['integrations', '🔌', 'Integrations'],
     ['Admin'],
     ['settings', '⚙️', 'Settings'],
     ['setup', '🧭', 'Setup wizard'],

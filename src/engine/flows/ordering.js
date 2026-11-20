@@ -7,9 +7,10 @@ import { categories, productsIn, product, search } from '../../services/catalog.
 import {
   totals, refreshCart, createOrder, lineText, paymentLabel, fulfilmentLine, ownerOrderAlert, recentOrders, getOrder,
 } from '../../services/orders.js';
-import { payPageUrl, createRazorpayLink, razorpayEnabled } from '../../services/payments.js';
+import { payPageUrl, createRazorpayLink, razorpayEnabled, createStripeCheckout, stripeEnabled, payLinkEnabled, payLinkFor } from '../../services/payments.js';
 import { setCustomerField } from '../../services/customers.js';
-import { parseOrderText, aiEnabled } from '../../services/ai.js';
+import { understand, aiEnabled } from '../../services/ai.js';
+import { emit } from '../../services/integrations.js';
 import { log } from '../../lib/logger.js';
 import { get } from '../../db/index.js';
 
@@ -67,7 +68,11 @@ export const ordering = {
       return afterAddress(c);
     }
     if (c.state === 'ORD_NOTES') { c.ctx.notes = t.slice(0, 500); return askPayment(c); }
-    // Anything else typed while shopping = product search / AI understanding
+    // Anything else typed while shopping: AI understands lists like "2 kilo aata aur 1 maggi", else product search
+    if (aiEnabled(c.biz, 'order_parsing') && t.split(/\s+/).length >= 2) {
+      const r = await understand(c.biz, { phone: c.phone, text: t, lang: c.lang });
+      if (r?.items?.length) return addAiItems(c, r);
+    }
     return this.onFreeText(c, true);
   },
 
@@ -90,17 +95,9 @@ export const ordering = {
     return c.cart.length ? showCart(c) : showCategories(c, 0);
   },
 
-  /** Free text outside a step: AI order parsing (optional) -> keyword search. */
+  /** Free text: keyword product search (AI understanding happens centrally in the engine). */
   async onFreeText(c, force = false) {
     const t = c.input.text || '';
-    if (aiEnabled(c.biz, 'order_parsing') && t.split(/\s+/).length >= 2) {
-      const parsed = await parseOrderText(c.biz, t).catch((e) => { log.warn('ai parse failed', { err: e.message }); return null; });
-      if (parsed?.items?.length) {
-        for (const it of parsed.items) mergeLine(c, product(c.biz.id, it.id), it.qty);
-        await c.say(c.t('ai_cart_intro') + (parsed.unclear?.length ? `\n${c.t('ai_unclear', { items: parsed.unclear.join(', ') })}` : ''));
-        return showCart(c);
-      }
-    }
     const found = search(c.biz.id, t);
     if (found.length) {
       c.setState('ORD_BROWSE');
@@ -121,6 +118,13 @@ export const ordering = {
     return showCart(c);
   },
 };
+
+/** Add AI-understood items to the cart (already validated against the catalogue) and show the cart to confirm. */
+export async function addAiItems(c, r) {
+  for (const it of r.items) mergeLine(c, product(c.biz.id, it.id), it.qty);
+  await c.say(c.t('ai_cart_intro') + (r.unclear?.length ? `\n${c.t('ai_unclear', { items: r.unclear.join(', ') })}` : ''));
+  return showCart(c);
+}
 
 function productRow(c, p) {
   return { id: `ord:p:${p.id}`, title: p.name, description: `${cur(c, p.price)} / ${p.unit}${p.description ? ` · ${p.description}` : ''}` };
@@ -237,7 +241,8 @@ async function afterAddress(c) {
 
 function paymentModes(biz) {
   const o = biz.settings.ordering;
-  const modes = (o.payment_modes || []).filter((m) => (m === 'upi' ? Boolean(o.upi_id) : m === 'online' ? razorpayEnabled(biz) : m === 'cod'));
+  const ok = { cod: true, upi: Boolean(o.upi_id), online: razorpayEnabled(biz), stripe: stripeEnabled(biz), link: payLinkEnabled(biz) };
+  const modes = (o.payment_modes || []).filter((m) => ok[m]);
   return modes.length ? modes : ['cod'];
 }
 
@@ -246,8 +251,10 @@ async function askPayment(c) {
   if (modes.length === 1) return placeOrder(c, modes[0]);
   const t = totals(c.biz, c.cart, c.ctx.fulfil || defaultFulfilment(c));
   c.setState('ORD_PAY');
-  const label = { cod: c.t(c.ctx.fulfil === 'pickup' ? 'btn_pay_cod_pickup' : 'btn_pay_cod'), upi: c.t('btn_pay_upi'), online: c.t('btn_pay_online') };
-  return c.buttons(c.t('ask_payment', { total: cur(c, t.total) }), modes.map((m) => ({ id: `ord:pay:${m}`, title: label[m] })));
+  const label = { cod: c.t(c.ctx.fulfil === 'pickup' ? 'btn_pay_cod_pickup' : 'btn_pay_cod'), upi: c.t('btn_pay_upi'), online: c.t('btn_pay_online'), stripe: c.t('btn_pay_stripe'), link: c.t('btn_pay_link') };
+  const body = c.t('ask_payment', { total: cur(c, t.total) });
+  const rows = modes.map((m) => ({ id: `ord:pay:${m}`, title: label[m] }));
+  return rows.length <= 3 ? c.buttons(body, rows) : c.pagedList(body, c.t('btn_pay_now'), rows);
 }
 
 async function placeOrder(c, mode) {
@@ -263,12 +270,26 @@ async function placeOrder(c, mode) {
   });
   c.cart = [];
   c.reset();
+  emit(c.biz, 'order.created', { ...order, name: order.customer_name });
   const vars = { order_no: order.order_no, lines: lineText(c.biz, order.items), total: cur(c, order.total), eta: c.biz.settings.ordering.eta_text };
 
   if (mode === 'cod') {
-    await c.say(c.t('order_placed', { ...vars, payment: paymentLabel(c.biz, order), fulfilment: fulfilmentLine(c.biz, order) }));
+    await c.say(c.t('order_placed', { ...vars, payment: paymentLabel(c.biz, order, c.lang), fulfilment: fulfilmentLine(c.biz, order, c.lang) }));
     await ownerOrderAlert(c.biz, order);
     return true;
+  }
+  if (mode === 'stripe') {
+    try {
+      return c.cta(c.t('order_pay_link', vars), c.t('btn_pay_now'), await createStripeCheckout(c.biz, order));
+    } catch (e) {
+      log.error('stripe checkout failed', { err: e.message, order: order.id });
+      await c.say(c.t('error'));
+      return ownerOrderAlert(c.biz, getOrder(c.biz.id, order.id));
+    }
+  }
+  if (mode === 'link') {
+    await c.cta(c.t('order_pay_link', vars), c.t('btn_pay_now'), payLinkFor(c.biz, order));
+    return ownerOrderAlert(c.biz, order);
   }
   if (mode === 'online') {
     try {

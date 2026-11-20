@@ -211,6 +211,32 @@ Questions the bot answers instantly: timings, fees, location, parking, home deli
 * **Keywords** – words that trigger this answer when a customer **types** a question, separated by commas:
   `fees, charges, price, kitna`. Add Hindi/Hinglish words your customers use.
 
+## 12b. AI assistant (optional)
+
+Menu → **AI assistant**. Turn it on and your bot answers *any* question from your own information – in the
+customer's language (English, Hindi, Hinglish, Gujarati…). It also understands typed orders ("2 kilo aata aur 1 maggi")
+and booking requests.
+
+* **Knowledge base** – add your price list, menu, policies, doctor profiles, delivery areas, offers: paste text,
+  upload a PDF/TXT/CSV, or import a page of your website. Switch a source off when it's outdated.
+* **Try a question** – type what a customer would ask and see the answer before customers do.
+* **Settings** – tone (friendly / formal / short), assistant name, extra instructions ("always mention free delivery above ₹300").
+* It never invents prices or policies; orders and bookings still need the customer to confirm; complaints and
+  medical/legal questions go to your team.
+
+## 12c. Menu & quick replies
+
+Menu → **Menu & quick replies**. Add your own buttons to the WhatsApp menu – and automatic replies when customers
+type certain words. Each button can send: a text, a link button (website, form, payment page), an image (offer
+poster), a document (price-list PDF), a map location, or start ordering / booking / the enquiry form.
+Keywords like *price list, rate, bhav* trigger the same reply when typed.
+
+## 12d. Integrations
+
+Menu → **Integrations**. Every new lead, order, booking, handoff and feedback can be sent automatically to
+**Google Sheets**, **HubSpot**, **Airtable**, or any tool through **n8n / Make / Zapier** (webhook). Fill in the
+details, **Save**, then **Send test**. The delivery log shows every send; failed sends are retried automatically.
+
 ## 13. Bot messages
 
 Change **any** word the bot says.
@@ -220,7 +246,9 @@ Change **any** word the bot says.
 * Keep words in `{curly braces}` – they are filled automatically (business name, total, date, time…).
 * **Button labels must be 20 characters or less** (24 for menu items). A red warning appears if too long.
 * Use WhatsApp formatting: `*bold*`, `_italic_`, emojis.
-* Language (English/Hinglish) is chosen in **Settings → Business → Bot language**.
+* Choose the **language** at the top to edit the Hindi, Gujarati, Hinglish or English version of every text.
+* The main language is chosen in **Settings → Business → Bot language**. In **Settings → Languages** you can let every
+  customer pick their own language (they can also type *language* anytime).
 
 ## 14. Test the bot
 
@@ -264,11 +292,11 @@ minutes to a day).
 | **Business** | Name, owner WhatsApp (alerts), public number, address, Maps link, Google review link, website, about, language, time zone, currency |
 | **Opening hours** | Weekly hours with breaks; what the bot does when closed (keep working and say when you open, or only collect messages) |
 | **Features** | Switch Ordering / Appointments / FAQs & enquiries on/off, menu style, how long the bot stays quiet after "talk to us", alerts to owner/staff |
-| **Ordering & payments** | Home delivery, pickup, delivery charge, free delivery above, minimum order, delivery time text, payment options (Cash, UPI, Razorpay), UPI ID, special instructions, product photos, accept prescriptions, unfinished-cart reminder |
+| **Ordering & payments** | Home delivery, pickup, delivery charge, free delivery above, minimum order, delivery time text, payment options (Cash, UPI, Razorpay, Stripe card payments, any payment link like PayPal.me), UPI ID, special instructions, product photos, accept prescriptions, unfinished-cart reminder |
+| **Languages** | Let customers choose their language (English, Hinglish, हिन्दी, ગુજરાતી), ask new customers first |
 | **Appointments** | Staff name (Doctor/Stylist…), time between slots, days ahead, minimum notice, let customers choose staff, ask for name, check-in day, review request, auto-complete, reminders, triage questions |
 | **Enquiry form** | The questions asked when someone taps "Send enquiry" (with optional answer buttons) |
 | **WhatsApp** | Connection details (usually done by your developer), test connection, send a test message |
-| **AI** | Optional: let customers type orders and questions in their own words |
 | **Team** | Add staff logins. *Staff* can handle orders, appointments and chats; *Owner* can change everything |
 | **My account** | Change your password |
 

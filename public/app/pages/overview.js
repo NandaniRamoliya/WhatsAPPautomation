@@ -30,6 +30,8 @@ export function Overview() {
     has('ordering') && ['Add your products & prices', c.catalogue, '#/catalogue'],
     has('booking') && ['Add services, staff & working hours', c.services, '#/services'],
     ['Add common questions (FAQs)', c.faqs, '#/faqs'],
+    ['Add your own menu buttons (price list, offers, location…)', c.menu, '#/menu'],
+    c.knowledge !== null && ['Teach the AI assistant your business (knowledge base)', c.knowledge, '#/ai'],
     ['Try the bot in the tester', c.tested, '#/test'],
     ['Connect your WhatsApp number', c.whatsapp, '#/settings?tab=whatsapp'],
     ['Get message templates approved (reminders, updates)', c.templates, '#/templates'],

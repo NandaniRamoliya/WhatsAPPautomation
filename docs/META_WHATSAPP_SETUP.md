@@ -88,6 +88,14 @@ then type the approved name and language code on the Templates page. For broadca
 Rules: lowercase names with underscores; parameters `{{1}}`, `{{2}}`; choose the category honestly (Utility for
 transactional, Marketing for offers); fill the sample values Meta asks for.
 
+## Using the same number on the WhatsApp Business app (coexistence)
+
+Meta lets many WhatsApp **Business app** numbers also connect to the Cloud API, so the owner keeps chatting from the
+phone while the bot works. When onboarding through a partner flow that supports it, subscribe the webhook field for
+message echoes as well. The kit handles echoes: when the owner replies from the phone, the message appears in
+**Chats** (as "WhatsApp app") and the bot goes quiet for that customer. Check Meta's current eligibility rules
+(country, number type) before promising it to a client.
+
 ## Step 7 – Go live with the client's real number
 
 1. **WhatsApp Manager → Phone numbers → Add phone number**. Enter the client's dedicated number

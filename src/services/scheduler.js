@@ -5,7 +5,7 @@ import { config } from '../config.js';
 import { log } from '../lib/logger.js';
 import * as B from '../whatsapp/builders.js';
 import { send, windowOpen } from '../whatsapp/sender.js';
-import { text } from '../engine/texts.js';
+import { textFor } from '../engine/texts.js';
 import { runDueJobs } from './jobs.js';
 import { getBusiness } from './business.js';
 import { autoCompleteDue } from './appointments.js';
@@ -28,8 +28,8 @@ export async function cartNudges(force = false) {
     run('UPDATE sessions SET ctx = ? WHERE business_id = ? AND phone = ?', JSON.stringify(ctx), s.business_id, s.phone);
     const c = getCustomer(biz.id, s.phone);
     const n = firstName(c?.name);
-    await send(biz, s.phone, B.buttons(text(biz, 'cart_nudge', { name_sp: n ? ` ${n}` : '' }), [
-      { id: 'ord:checkout', title: text(biz, 'btn_checkout') }, { id: 'ord:cart', title: text(biz, 'btn_view_cart') },
+    await send(biz, s.phone, B.buttons(textFor(biz, s.phone, 'cart_nudge', { name_sp: n ? ` ${n}` : '' }), [
+      { id: 'ord:checkout', title: textFor(biz, s.phone, 'btn_checkout') }, { id: 'ord:cart', title: textFor(biz, s.phone, 'btn_view_cart') },
     ]));
   }
 }

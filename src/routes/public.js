@@ -5,7 +5,7 @@ import { run } from '../db/index.js';
 import { log } from '../lib/logger.js';
 import { getBusiness, getBusinessBySlug, waLink } from '../services/business.js';
 import { getOrderByToken, confirmPayment } from '../services/orders.js';
-import { payPageHtml, verifyRazorpaySignature } from '../services/payments.js';
+import { payPageHtml, verifyRazorpaySignature, verifyStripeSignature, paidPageHtml } from '../services/payments.js';
 
 const r = express.Router();
 
@@ -32,6 +32,29 @@ r.post('/webhooks/razorpay/:bizId', async (req, res) => {
       if (bizId === biz.id) await confirmPayment(biz, orderId, req.body.payload.payment?.entity?.id || ent.id);
     }
   } catch (e) { log.error('razorpay webhook error', e); }
+});
+
+// Stripe -> "checkout.session.completed". Configure URL: PUBLIC_URL/webhooks/stripe/<business id>
+r.post('/webhooks/stripe/:bizId', async (req, res) => {
+  const biz = getBusiness(Number(req.params.bizId));
+  if (!biz || !verifyStripeSignature(biz, req.rawBody?.toString('utf8') || '', req.get('stripe-signature'))) return res.sendStatus(400);
+  res.json({ received: true });
+  try {
+    const ev = req.body || {};
+    if (!run('INSERT INTO processed_events (id) VALUES (?) ON CONFLICT DO NOTHING', `stripe:${ev.id}`).changes) return;
+    const session = ev.data?.object || {};
+    if (['checkout.session.completed', 'checkout.session.async_payment_succeeded'].includes(ev.type) && session.payment_status === 'paid') {
+      const [bizId, orderId] = String(session.client_reference_id || '').split('-').map(Number);
+      if (bizId === biz.id && orderId) await confirmPayment(biz, orderId, session.payment_intent || session.id);
+    }
+  } catch (e) { log.error('stripe webhook error', e); }
+});
+
+// Page customers land on after card / link payments
+r.get('/paid/:token', (req, res) => {
+  const order = getOrderByToken(req.params.token);
+  if (!order) return res.status(404).type('text/plain').send('Not found');
+  res.set('Cache-Control', 'no-store').type('html').send(paidPageHtml(getBusiness(order.business_id), order));
 });
 
 // Short link for posters/QR: /q/<slug> -> opens WhatsApp chat with "Hi" pre-filled
