@@ -6,7 +6,7 @@
 // Quick mode (no account, no domain): Cloudflare gives a random https://xxxx.trycloudflare.com
 // address. It changes every time the tunnel restarts – fine for demos and testing.
 // For a client that goes live, use a NAMED tunnel on your own domain (fixed address,
-// free on Cloudflare): see docs/DEPLOYMENT.md → "Cloudflare Tunnel".
+// free on Cloudflare): see docs/DEVELOPER_GUIDE.md section 20 → "Free with Cloudflare".
 //
 // Uses the `cloudflared` program if installed, otherwise downloads it once via npx.
 import { spawn, spawnSync } from 'node:child_process';
@@ -36,7 +36,7 @@ const onData = (d) => {
       '     then subscribe to the "messages" field.',
       `  3. Dashboard: ${url}/`,
       '',
-      'Keep this window open. The address changes when the tunnel restarts – for a fixed address use a named tunnel (docs/DEPLOYMENT.md).',
+      'Keep this window open. The address changes when the tunnel restarts – for a fixed address use a named tunnel (docs/DEVELOPER_GUIDE.md section 20).',
       'Press Ctrl+C to stop.',
     ].join('\n'));
   }

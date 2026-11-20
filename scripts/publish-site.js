@@ -12,7 +12,7 @@
 //
 // Note: this publishes the marketing website only. The bot + dashboard is a Node.js server
 // (webhooks, database, reminders) – run it on a VPS / Render / your PC + Cloudflare Tunnel.
-// See docs/DEPLOYMENT.md.
+// See docs/DEVELOPER_GUIDE.md section 20.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';

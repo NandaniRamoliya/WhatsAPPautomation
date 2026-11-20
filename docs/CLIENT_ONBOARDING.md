@@ -5,6 +5,20 @@ Everything is already built – this is the checklist of the small things you fi
 
 ---
 
+## Before you start – what the client must buy / provide
+
+| Item | Why | Typical cost |
+|---|---|---|
+| **A phone number (new SIM)** that is not on personal WhatsApp | Becomes the bot's WhatsApp number (or their existing WhatsApp Business app number via coexistence) | SIM ₹0–200 + recharge |
+| **Meta Business account** (free) | Connects the number to the official WhatsApp Cloud API | Free; Meta charges per template message sent after 24 h |
+| **VPS server** (1 vCPU / 1 GB, Ubuntu) – e.g. Hostinger, DigitalOcean, Hetzner, AWS Lightsail | Runs the bot 24/7: receives messages, sends replies and reminders, holds the database | ~₹400–800 / month |
+| **Domain** (optional, recommended) | Fixed https address for the bot, e.g. `bot.clientname.com` | ~₹800 / year |
+| **AI key** (optional) – Claude, OpenAI or Gemini | Only if the AI assistant is switched on | ~₹0.5–2 per AI reply |
+| **Payment gateway** (optional) – Razorpay / Stripe | Online payments that confirm automatically | Gateway fee per payment |
+
+> Cloudflare Pages (free) only hosts the **Replix website**. The bot itself needs the VPS (or a PC that is always on), with Cloudflare Tunnel or nginx giving it https.
+
+
 ## Part A – Requirements form (send to the client / fill on a call)
 
 Copy this into a Google Form, or fill it with the client on a 20-minute call.
@@ -86,7 +100,7 @@ Copy this into a Google Form, or fill it with the client on a 20-minute call.
 ## Part B – Delivery checklist (developer / agency)
 
 ### Day 0 – before the call (10 min)
-- [ ] Server is running (one server for all your clients – see [DEPLOYMENT.md](DEPLOYMENT.md)).
+- [ ] Server is running (one server for all your clients – see Developer Guide section 20).
 - [ ] Agency dashboard → **All businesses → + New client business** → choose preset, owner phone, owner login,
       "Add example data" ON (great for the demo).
 

@@ -64,6 +64,20 @@ Log in → **Test the bot** → say "Hi". Demo logins: `kirana@demo.test`, `dent
 
 Full checklist + client requirements form: [docs/CLIENT_ONBOARDING.md](docs/CLIENT_ONBOARDING.md).
 
+## What the client must buy / provide
+
+| Item | Why | Typical cost |
+|---|---|---|
+| **A phone number (new SIM)** that is not on personal WhatsApp | Becomes the bot's WhatsApp number (or their existing WhatsApp Business app number via coexistence) | SIM ₹0–200 + recharge |
+| **Meta Business account** (free) | Connects the number to the official WhatsApp Cloud API | Free; Meta charges per template message sent after 24 h |
+| **VPS server** (1 vCPU / 1 GB, Ubuntu) – e.g. Hostinger, DigitalOcean, Hetzner, AWS Lightsail | Runs the bot 24/7: receives messages, sends replies and reminders, holds the database | ~₹400–800 / month |
+| **Domain** (optional, recommended) | Fixed https address for the bot, e.g. `bot.clientname.com` | ~₹800 / year |
+| **AI key** (optional) – Claude, OpenAI or Gemini | Only if the AI assistant is switched on | ~₹0.5–2 per AI reply |
+| **Payment gateway** (optional) – Razorpay / Stripe | Online payments that confirm automatically | Gateway fee per payment |
+
+> Cloudflare Pages (free) only hosts the **Replix website**. The bot itself needs the VPS (or a PC that is always on), with Cloudflare Tunnel or nginx giving it https.
+
+
 ## Deploy free with Cloudflare (like PinPage)
 
 Replix has two parts:
@@ -79,19 +93,18 @@ npm run site:publish   # needs CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID in .
 npm run tunnel         # free https://xxxx.trycloudflare.com address for the bot (keep npm start running)
 ```
 
-Step by step (token permissions, named tunnel on your own domain, Meta webhook): [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#free-with-cloudflare).
+Step by step (token permissions, named tunnel on your own domain, Meta webhook): [Developer Guide §20](docs/DEVELOPER_GUIDE.md#20-deployment--operations).
 
 ## Documentation
 
 | Guide | For |
 |---|---|
-| 📕 [docs/Developer-Guide.pdf](docs/Developer-Guide.pdf) | **PDF, 49 pages** – from zero to delivering clients: how the code works, every file, new-client playbook, "if this happens, do this", recipes with code, future scope |
+| 📕 [docs/Developer-Guide.pdf](docs/Developer-Guide.pdf) | **PDF, 50 pages** – from zero to delivering clients: how the code works, every file, new-client playbook, "if this happens, do this", recipes with code, future scope |
 | 📗 [docs/User-Guide.pdf](docs/User-Guide.pdf) | **PDF, 49 pages** – for owners & staff, with screenshots: every screen, playbooks for clinics, marts, cafes, pharmacies, salons, gyms, coaching, services |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Business owners & staff (non-technical) – every screen explained |
 | [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) | Developers – architecture, data model, engine, API reference, extending, security, testing |
 | [docs/CLIENT_ONBOARDING.md](docs/CLIENT_ONBOARDING.md) | Agencies – requirements form, delivery checklist, pricing ideas |
 | [docs/META_WHATSAPP_SETUP.md](docs/META_WHATSAPP_SETUP.md) | Meta app, permanent token, webhook, templates, going live, error codes |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Free Cloudflare (Pages site + Tunnel), VPS (PM2 + nginx + https), Docker, Render, backups, updates |
 | [docs/USE_CASES.md](docs/USE_CASES.md) | 100 business types mapped to presets and settings |
 
 ## Project layout

@@ -33,6 +33,20 @@ questions, and tells you whenever a person is needed. You manage everything from
 
 ---
 
+## 0. What you need to buy / provide
+
+| Item | Why | Typical cost |
+|---|---|---|
+| **A phone number (new SIM)** that is not on personal WhatsApp | Becomes the bot's WhatsApp number (or their existing WhatsApp Business app number via coexistence) | SIM ₹0–200 + recharge |
+| **Meta Business account** (free) | Connects the number to the official WhatsApp Cloud API | Free; Meta charges per template message sent after 24 h |
+| **VPS server** (1 vCPU / 1 GB, Ubuntu) – e.g. Hostinger, DigitalOcean, Hetzner, AWS Lightsail | Runs the bot 24/7: receives messages, sends replies and reminders, holds the database | ~₹400–800 / month |
+| **Domain** (optional, recommended) | Fixed https address for the bot, e.g. `bot.clientname.com` | ~₹800 / year |
+| **AI key** (optional) – Claude, OpenAI or Gemini | Only if the AI assistant is switched on | ~₹0.5–2 per AI reply |
+| **Payment gateway** (optional) – Razorpay / Stripe | Online payments that confirm automatically | Gateway fee per payment |
+
+> Cloudflare Pages (free) only hosts the **Replix website**. The bot itself needs the VPS (or a PC that is always on), with Cloudflare Tunnel or nginx giving it https.
+
+
 ## 1. How it works in one minute
 
 1. A customer scans your QR code or sends "Hi" to your WhatsApp business number.

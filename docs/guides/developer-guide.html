@@ -674,6 +674,19 @@ test('my feature', async () =&gt; {
 </table>
 <p class="small muted">A copy-paste version of this form is in <code>docs/CLIENT_ONBOARDING.md</code>.</p>
 
+<h3>What the client must buy / provide</h3>
+<table class="t-narrow">
+  <thead><tr><th>Item</th><th>Why</th><th>Typical cost</th></tr></thead>
+  <tbody>
+    <tr><td><b>Phone number (new SIM)</b> not used on personal WhatsApp</td><td>Becomes the bot's WhatsApp number (or the existing WhatsApp Business app number via coexistence).</td><td>SIM ₹0–200 + recharge</td></tr>
+    <tr><td><b>Meta Business account</b></td><td>Connects the number to the official WhatsApp Cloud API.</td><td>Free; Meta charges per template message after 24 h</td></tr>
+    <tr><td><b>VPS server</b> (1 vCPU / 1 GB, Ubuntu) – Hostinger, DigitalOcean, Hetzner, AWS Lightsail…</td><td>Runs the bot 24/7: receives and sends messages, reminders, database.</td><td>~₹400–800 / month</td></tr>
+    <tr><td><b>Domain</b> (optional, recommended)</td><td>Fixed https address, e.g. bot.clientname.com.</td><td>~₹800 / year</td></tr>
+    <tr><td><b>AI key</b> (optional) – Claude, OpenAI or Gemini</td><td>Only if the AI assistant is on.</td><td>~₹0.5–2 per AI reply</td></tr>
+    <tr><td><b>Payment gateway</b> (optional) – Razorpay / Stripe</td><td>Online payments that confirm automatically.</td><td>Fee per payment</td></tr>
+  </tbody>
+</table>
+<div class="callout tip"><span class="t">Cloudflare</span>Cloudflare Pages (free) hosts only the Replix website. The bot needs the VPS (or a PC that is always on); Cloudflare Tunnel or nginx gives it https.</div>
 <h2>23. Client requirement → where to configure it</h2>
 <table>
   <thead><tr><th>Client says…</th><th>Do this (no code)</th></tr></thead>
@@ -743,7 +756,7 @@ pm2 restart whatsapp-bot</code></pre><p>New database migrations run automaticall
   <thead><tr><th>Part</th><th>How</th></tr></thead>
   <tbody>
     <tr><td><b>Product website</b> (<code>product-site/</code>, static)</td><td><b>Cloudflare Pages</b>, free. Put <code>CLOUDFLARE_API_TOKEN</code> and <code>CLOUDFLARE_ACCOUNT_ID</code> in <code>.env</code>, run <code>npm run site:publish</code>. The first run creates the Pages project <code>replix</code> → <code>https://replix.pages.dev/</code> (if the name is taken Cloudflare adds a suffix; the script prints the real address). Script: <code>scripts/publish-site.js</code> – fills <code>{{placeholders}}</code>, writes robots.txt, sitemap.xml, 404 page and JSON-LD, then calls <code>wrangler pages deploy</code>.</td></tr>
-    <tr><td><b>Bot + dashboard</b> (Node.js server)</td><td>Cannot run on Pages: it needs a process that is always on (webhooks, SQLite, scheduler). Run it on your PC or a VPS and expose it with <b>Cloudflare Tunnel</b>: <code>npm run tunnel</code> for a quick <code>trycloudflare.com</code> address (demos), or a named tunnel on your own domain for live clients (fixed address, free). Steps: <code>docs/DEPLOYMENT.md</code> → "Free with Cloudflare".</td></tr>
+    <tr><td><b>Bot + dashboard</b> (Node.js server)</td><td>Cannot run on Pages: it needs a process that is always on (webhooks, SQLite, scheduler). Run it on your PC or a VPS and expose it with <b>Cloudflare Tunnel</b>: <code>npm run tunnel</code> for a quick <code>trycloudflare.com</code> address (demos), or a named tunnel on your own domain for live clients (fixed address, free). Steps: <code>docs/DEVELOPER_GUIDE.md</code> section 20 → "Free with Cloudflare".</td></tr>
   </tbody>
 </table>
 <div class="callout warn"><span class="t">Why not the whole bot on Cloudflare?</span>Cloudflare Workers + D1 could host it, but the database layer is synchronous <code>node:sqlite</code> and the scheduler is an in-process loop – moving it is a rewrite of the data layer (Part G). A small VPS (or a PC) + tunnel gives the same free https with no code changes.</div>
@@ -1114,7 +1127,6 @@ registerJob('order.feedback', async (job) =&gt; {
     <tr><td><code>docs/DEVELOPER_GUIDE.md</code></td><td>Markdown version of the technical reference.</td></tr>
     <tr><td><code>docs/CLIENT_ONBOARDING.md</code></td><td>Copy-paste requirements form and delivery checklist.</td></tr>
     <tr><td><code>docs/META_WHATSAPP_SETUP.md</code></td><td>Detailed Meta setup and templates.</td></tr>
-    <tr><td><code>docs/DEPLOYMENT.md</code></td><td>Free Cloudflare (Pages + Tunnel), VPS, Docker, Render step by step.</td></tr>
     <tr><td><code>product-site/</code></td><td>The Replix product website (published to Cloudflare Pages with <code>npm run site:publish</code>).</td></tr>
     <tr><td><code>docs/USE_CASES.md</code></td><td>100 business types mapped to presets and settings.</td></tr>
   </tbody>
