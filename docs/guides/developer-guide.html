@@ -14,7 +14,7 @@
       <div class="kicker">WhatsApp Automation Kit · Developer Guide</div>
       <h1>From zero to delivering clients</h1>
       <div class="sub">How the code works, how to run it, how to set up every new client, what to do when something goes wrong, and how to grow it for future requirements.</div>
-      <div class="pillrow"><span class="pill">Ordering</span><span class="pill">Appointments</span><span class="pill">Enquiries</span><span class="pill">Reminders &amp; follow-ups</span><span class="pill">Payments</span><span class="pill">Multi-client</span><span class="pill">AI + knowledge base (RAG)</span><span class="pill">Hindi · Gujarati</span><span class="pill">Sheets / CRM sync</span></div>
+      <div class="pillrow"><span class="pill">Ordering</span><span class="pill">Appointments</span><span class="pill">Enquiries</span><span class="pill">Reminders &amp; follow-ups</span><span class="pill">Payments</span><span class="pill">Multi-client</span><span class="pill">AI: Claude · GPT · Gemini + RAG</span><span class="pill">Hindi · Gujarati</span><span class="pill">Sheets / CRM sync</span></div>
     </div>
   </div>
   <div class="meta">
@@ -120,7 +120,7 @@
     <tr><td>Dashboard</td><td><b>Preact + htm</b> loaded through an import map. No bundler, no build step – edit a file and refresh.</td></tr>
     <tr><td>Security</td><td>Node <code>crypto</code>: scrypt passwords, AES-256-GCM for stored tokens, HMAC-signed sessions and webhook checks.</td></tr>
     <tr><td>Payments</td><td>UPI deep-link page with QR (free), Razorpay Payment Links and Stripe Checkout (automatic confirmation), any payment link (PayPal.me…).</td></tr>
-    <tr><td>AI (optional)</td><td>Anthropic Claude via <code>@anthropic-ai/sdk</code>: structured outputs, prompt caching; knowledge search with SQLite FTS5; PDF text with <code>unpdf</code>. Code validates every AI answer.</td></tr>
+    <tr><td>AI (optional)</td><td>Three engines per client: <b>Claude</b> (via <code>@anthropic-ai/sdk</code>: structured outputs, prompt caching), <b>OpenAI GPT</b> (strict JSON schema) and <b>Google Gemini</b> (response schema) – same prompt and validation; knowledge search with SQLite FTS5; PDF text with <code>unpdf</code>. Code validates every AI answer.</td></tr>
     <tr><td>Dependencies</td><td>Only 7: <code>express</code>, <code>qrcode</code>, <code>preact</code>, <code>htm</code>, <code>@anthropic-ai/sdk</code>, <code>zod</code>, <code>unpdf</code>.</td></tr>
   </tbody>
 </table>
@@ -168,7 +168,7 @@ cd WhatsAPPautomation</code></pre></li>
     <tr><td><code>npm run users</code></td><td>Lists every login, its role and business, and which database file is used.</td></tr>
     <tr><td><code>npm run create-admin -- email "password"</code></td><td>Creates a super-admin, or <b>resets the password</b> of any existing login.</td></tr>
     <tr><td><code>npm run backup</code></td><td>Safe online copy of the database into <code>data/backups/</code> (keeps the newest 14).</td></tr>
-    <tr><td><code>npm test</code></td><td>Runs all 37 automated tests (no internet needed).</td></tr>
+    <tr><td><code>npm test</code></td><td>Runs all 41 automated tests (no internet needed).</td></tr>
     <tr><td><code>node docs/fiverr/src/build.cjs</code></td><td>Rebuilds the Fiverr gig gallery images (needs Playwright).</td></tr>
     <tr><td><code>node docs/guides/build-pdf.cjs</code></td><td>Rebuilds these PDF guides from <code>docs/guides/*.html</code> (needs Playwright).</td></tr>
   </tbody>
@@ -189,7 +189,9 @@ cd WhatsAPPautomation</code></pre></li>
     <tr><td><code>GRAPH_VERSION</code></td><td>v24.0</td><td>Meta Graph API version – upgrading is a one-line change.</td></tr>
     <tr><td><code>WA_VERIFY_TOKEN</code></td><td>auto</td><td>Word you type in Meta's webhook settings (shown in Settings → WhatsApp).</td></tr>
     <tr><td><code>META_APP_SECRET</code></td><td>–</td><td>App secret for webhook signatures (per-business override possible).</td></tr>
-    <tr><td><code>ANTHROPIC_API_KEY</code> / <code>AI_MODEL</code></td><td>– / claude-opus-5-5</td><td>Enables optional AI understanding.</td></tr>
+    <tr><td><code>ANTHROPIC_API_KEY</code> / <code>AI_MODEL</code></td><td>– / claude-opus-5-5</td><td>Server key + default model for the Claude engine.</td></tr>
+    <tr><td><code>OPENAI_API_KEY</code> / <code>OPENAI_MODEL</code> / <code>OPENAI_BASE_URL</code></td><td>– / gpt-5-mini / api.openai.com/v1</td><td>OpenAI engine. The base URL also allows any OpenAI-compatible API (OpenRouter, Groq, Azure OpenAI, Ollama).</td></tr>
+    <tr><td><code>GEMINI_API_KEY</code> / <code>GEMINI_MODEL</code></td><td>– / gemini-2.5-flash</td><td>Google Gemini engine.</td></tr>
     <tr><td><code>DEFAULT_TIMEZONE</code> / <code>DEFAULT_COUNTRY_CODE</code> / <code>DEFAULT_CURRENCY</code></td><td>Asia/Kolkata / 91 / INR</td><td>Defaults for new businesses and phone-number cleanup.</td></tr>
     <tr><td><code>SCHEDULER_INTERVAL_MS</code> / <code>SCHEDULER_ENABLED</code></td><td>30000 / true</td><td>How often reminders run; disable on extra copies of the server.</td></tr>
     <tr><td><code>LOG_LEVEL</code></td><td>info</td><td>debug, info, warn, error.</td></tr>
@@ -488,7 +490,16 @@ No staff at all = the business itself is one calendar.</code></pre>
 
 <h2>17. AI assistant, knowledge base, menus, languages and integrations</h2>
 <h3>17.1 The AI brain (<code>src/services/ai.js</code>)</h3>
-<p>Enabled when <code>ANTHROPIC_API_KEY</code> is set <b>and</b> the business turns on the <b>AI assistant</b> page. One structured call per free-text message returns:</p>
+<p><b>Three engines, one brain.</b> Each business picks <b>Claude</b> (default), <b>OpenAI GPT</b> or <b>Google Gemini</b> on the AI assistant page, optionally with its <b>own API key</b> (encrypted in <code>settings.ai.&lt;engine&gt;_key_enc</code>; otherwise the server key from <code>.env</code>) and a model override. <code>engineFor(biz)</code> resolves engine, key and model. The prompt, the output schema, the rules and every validation are identical; only the adapter differs:</p>
+<table>
+  <thead><tr><th>Engine</th><th>Adapter (<code>CALL.*</code> in ai.js)</th></tr></thead>
+  <tbody>
+    <tr><td>Claude</td><td><code>client.beta.messages.parse</code> + zod output format, cached system prompt, refusal fallback, low effort.</td></tr>
+    <tr><td>OpenAI GPT</td><td><code>POST {OPENAI_BASE_URL}/chat/completions</code> with <code>response_format: json_schema</code> (strict). Works with any OpenAI-compatible API.</td></tr>
+    <tr><td>Google Gemini</td><td><code>POST {GEMINI_BASE_URL}/models/{model}:generateContent</code> with <code>responseMimeType: application/json</code> + <code>responseSchema</code>.</td></tr>
+  </tbody>
+</table>
+<p>Every engine's output is re-checked with the same zod schema. Refusals, safety blocks, quota errors or invalid JSON → the bot simply continues without AI. One structured call per free-text message returns:</p>
 <pre><code>{ intent: 'question' | 'order' | 'booking' | 'human' | 'greeting' | 'other',
   answerable, answer, items: [{ id, qty }], unclear: [...], suggest: 'none' | 'order' | 'book' | 'faq' | 'human' }</code></pre>
 <div class="flow">
@@ -567,7 +578,7 @@ No staff at all = the business itself is one calendar.</code></pre>
 <p>Public (no login): <code>GET/POST /webhook</code>, <code>GET /pay/:token</code>, <code>GET /paid/:token</code>, <code>POST /webhooks/razorpay/:bizId</code>, <code>POST /webhooks/stripe/:bizId</code>, <code>GET /q/:slug</code> (redirects to WhatsApp), <code>GET /q/:slug/qr.png</code>, <code>GET /health</code>.</p>
 
 <h2>20. Tests</h2>
-<p><code>npm test</code> runs 37 tests in an in-memory database, without internet:</p>
+<p><code>npm test</code> runs 41 tests in an in-memory database, without internet:</p>
 <table>
   <thead><tr><th>File</th><th>Covers</th></tr></thead>
   <tbody>
@@ -575,6 +586,7 @@ No staff at all = the business itself is one calendar.</code></pre>
     <tr><td><code>test/booking.test.js</code></td><td>Triage → booking, double-booking guard, "any staff", holidays, reminder → confirm, reschedule, cancel, aftercare, check-in branches, recall, template fallback, FAQ + lead</td></tr>
     <tr><td><code>test/api.test.js</code></td><td>Webhook verify/signature/de-dup, login, CSRF, roles, secret masking, CSV import, simulator, pay page, inbox</td></tr>
     <tr><td><code>test/ai.test.js</code></td><td>AI brain against a mock API: cached prompt, structured output, chat memory, typed orders, knowledge answers with buttons, booking/human intents, large-KB search mode</td></tr>
+    <tr><td><code>test/ai-engines.test.js</code></td><td>OpenAI and Gemini against local mocks: own vs server key, strict schema / responseSchema, model override, bad output / safety block / quota error → safe fallback, no key → AI unused</td></tr>
     <tr><td><code>test/features.test.js</code></td><td>Knowledge base (Unicode search, files, SSRF guard), quick replies, menu pagination, Gujarati/Hindi + reminders in customer language, integrations (signature, Sheets, HubSpot, retries), Stripe, payment links, coexistence</td></tr>
   </tbody>
 </table>
@@ -678,7 +690,8 @@ test('my feature', async () =&gt; {
     <tr><td>"Alerts to my receptionist too"</td><td>Staff WhatsApp number (bookings) or add a Team login.</td></tr>
     <tr><td>"Send Diwali offer to customers"</td><td>Create a Marketing template in Meta → Broadcasts (opted-in only).</td></tr>
     <tr><td>"Import my old patients"</td><td>Customers → Import CSV with last_visit + service (schedules recalls).</td></tr>
-    <tr><td>"Answer questions from our documents / website"</td><td><code>ANTHROPIC_API_KEY</code> on the server → <b>AI assistant</b>: turn on, add knowledge (text, PDF, website pages), "Try a question".</td></tr>
+    <tr><td>"Answer questions from our documents / website"</td><td><b>AI assistant</b>: choose engine (Claude / ChatGPT / Gemini) + client's key, turn on, add knowledge (text, PDF, website pages), "Try a question".</td></tr>
+    <tr><td>"We want ChatGPT" / "We use Gemini"</td><td>AI assistant → AI engine → OpenAI GPT or Google Gemini + their key.</td></tr>
     <tr><td>"Understand typed orders"</td><td>AI assistant → "Understand typed orders" ON.</td></tr>
     <tr><td>"A Price list button that sends our PDF"</td><td><b>Menu &amp; quick replies</b> → button, type Document, PDF link, keywords "price list, rate".</td></tr>
     <tr><td>"Leads in our Google Sheet / HubSpot / Zoho"</td><td><b>Integrations</b> → Sheets / HubSpot / webhook to n8n or Make for Zoho → Send test.</td></tr>
@@ -783,7 +796,8 @@ pm2 restart whatsapp-bot</code></pre><p>New database migrations run automaticall
     <tr><td>Bot keeps saying "We are closed"</td><td>Wrong hours or time zone.</td><td>Settings → Opening hours; Settings → Business → Time zone.</td></tr>
     <tr><td>AI gives a wrong or old answer</td><td>Outdated knowledge, or conflicting FAQ.</td><td>Edit/disable the knowledge source, fix the FAQ, add an owner instruction; re-check with "Try a question".</td></tr>
     <tr><td>AI says "not sure" too often</td><td>The information isn't in the knowledge base.</td><td>Add the missing facts (prices, areas, timings) as text or FAQ.</td></tr>
-    <tr><td>AI never replies</td><td>No API key, AI switched off, key invalid/out of credit.</td><td>Check <code>ANTHROPIC_API_KEY</code>, AI assistant toggle, server logs (<code>ai call failed</code>).</td></tr>
+    <tr><td>AI never replies</td><td>No key for the chosen engine, AI switched off, key invalid, out of credit, wrong model name.</td><td>AI assistant → AI engine must show <b>Ready</b>; use "Try a question" (it shows the engine's error); check logs (<code>ai call failed</code>); clear the model field to use the default.</td></tr>
+    <tr><td>Client wants ChatGPT / Gemini instead of Claude</td><td>–</td><td>AI assistant → AI engine → choose it, paste their key, Save. Nothing else changes.</td></tr>
     <tr><td>PDF upload says "no text"</td><td>Scanned (image) PDF.</td><td>Paste the text instead, or export a text PDF.</td></tr>
     <tr><td>Customer stuck in the wrong language</td><td>They tapped another language.</td><td>They type <code>language</code>; or Customers → edit (or reset by deleting the language in DB).</td></tr>
     <tr><td>Google Sheet not receiving rows</td><td>Script not deployed as web app for "Anyone", or token mismatch.</td><td>Redeploy (new version), copy the new URL, same secret word; check Integrations → Delivery log.</td></tr>
@@ -1013,9 +1027,11 @@ registerJob('order.feedback', async (job) =&gt; {
     <tr><td>Voice notes understood</td><td>Download media → speech-to-text → treat as text.</td><td><span class="badge b">M</span></td><td>engine media branch</td></tr>
     <tr><td>More languages (Marathi, Tamil, Bengali…)</td><td>Hindi, Gujarati, Hinglish <b>✅ built</b> with customer choice; others: recipe 34.</td><td><span class="badge">S</span></td><td>texts.js</td></tr>
     <tr><td>Smarter AI assistant</td><td>Knowledge-base answers, typed orders and intents <b>✅ built</b>. Next: Claude with tools (check live slots, track an order) behind the same validation.</td><td><span class="badge b">M</span></td><td>ai.js + engine</td></tr>
-    <tr><td>OpenAI / Gemini as alternative AI engines</td><td>Provider switch inside <code>understand()</code> with the same JSON schema and validation.</td><td><span class="badge b">M</span></td><td>ai.js</td></tr>
+    <tr><td>OpenAI / Gemini as alternative AI engines</td><td><b>✅ Built</b> – choose per client on the AI assistant page. Another engine = one more adapter in <code>CALL</code>.</td><td><span class="badge">S</span></td><td>ai.js</td></tr>
     <tr><td>Twilio / 360dialog as WhatsApp providers</td><td>Adapter behind <code>sender.js</code> + webhook parser per provider (360dialog is almost identical to Cloud API).</td><td><span class="badge b">M</span></td><td>whatsapp/, routes/webhook.js</td></tr>
-    <tr><td>Website chat widget / Telegram / Instagram</td><td>New channel adapters feeding the same engine (<code>handleIncoming</code>).</td><td><span class="badge w">L</span></td><td>new routes + sender</td></tr>
+    <tr><td>Website chat widget</td><td>New channel connector: a small JS widget + endpoint feeding <code>handleIncoming</code>; replies rendered as chat bubbles/buttons.</td><td><span class="badge b">M</span></td><td>new route + sender channel</td></tr>
+    <tr><td>Telegram</td><td>Telegram Bot API connector (webhook in, sendMessage with inline keyboards out) on the same engine.</td><td><span class="badge b">M</span></td><td>new route + sender channel</td></tr>
+    <tr><td>Instagram / Messenger</td><td>Meta Messenger Platform connector; needs Meta app review.</td><td><span class="badge w">L</span></td><td>new route + sender channel</td></tr>
     <tr><td>Reports (monthly sales, repeat rate, no-show rate)</td><td>SQL reports page + CSV/PDF export.</td><td><span class="badge b">M</span></td><td>api.js + page</td></tr>
     <tr><td>Email / SMS alerts too</td><td>Add channels to <code>notify.js</code> (SMTP / SMS provider).</td><td><span class="badge">S</span></td><td>notify.js</td></tr>
     <tr><td>Two-factor login, per-user permissions</td><td>TOTP on login; permission list per role.</td><td><span class="badge b">M</span></td><td>middleware, users</td></tr>

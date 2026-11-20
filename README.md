@@ -21,7 +21,7 @@ Bot:      ✅ Booking ho gayi! Toothache – Dr. Mehta · 📅 Sat, 21 Nov, 10:3
 | 🛒 **Ordering** | Catalogue with categories & search, cart, delivery or pickup, address or 📍 location, notes, **COD / UPI QR page / Razorpay / Stripe card checkout / any payment link (PayPal.me…)**, order status updates, reorder, abandoned-cart nudge, prescription photos, native WhatsApp catalogue orders |
 | 📅 **Appointments** | Services & staff calendars, triage questions, race-safe slot booking, holidays/leave, **24h + 2h reminders** with confirm/reschedule/cancel buttons, aftercare & prescription message, **day-3 check-in → Google review or team alert**, recalls (6-month cleaning, monthly haircut…) |
 | ❓ **Enquiries** | FAQ menu + automatic answers to typed questions (keywords), lead form with your own questions |
-| 🤖 **AI assistant (RAG)** | Answers any question from the business's own documents, website pages, price lists, catalogue and FAQs – in the customer's language; understands typed orders ("2 kilo aata aur 1 maggi") and booking requests; chat memory; owner instructions & tone; "Try a question" box |
+| 🤖 **AI assistant (RAG)** | **Claude, OpenAI GPT or Google Gemini** – chosen per client, with the client's own key. Answers any question from the business's own documents, website pages, price lists, catalogue and FAQs – in the customer's language; understands typed orders ("2 kilo aata aur 1 maggi") and booking requests; chat memory; owner instructions & tone; "Try a question" box |
 | 🧩 **Menu & quick replies** | No-code custom menu buttons and keyword triggers that reply with text, link buttons, images, PDFs (price lists), map locations or jump into any flow |
 | 🌐 **Languages** | English, Hinglish, **Hindi** and **Gujarati** built in; each customer can pick their language – reminders and updates follow it; every text editable per language |
 | 🔌 **Integrations** | Google Sheets (copy-paste Apps Script), HubSpot, Airtable and signed webhooks for n8n / Make / Zapier / any CRM – with retries and a delivery log |
@@ -31,7 +31,7 @@ Bot:      ✅ Booking ho gayi! Toothache – Dr. Mehta · 📅 Sat, 21 Nov, 10:3
 | 📱 **Simulator** | Test the whole bot in the browser – no Meta account needed – with "fast-forward time" for reminders |
 | 🏢 **Agency mode** | Many clients on one server, each with its own number, data and logins; super-admin console |
 | 📲 **Same number as the phone app** | Supports Meta's WhatsApp Business app + API coexistence: when the owner replies from the phone, the bot steps back for that chat |
-| 🔒 **Production-grade** | Webhook signature check, de-duplication, per-customer ordering, 24h-window & template fallback, encrypted secrets, roles, audit log, backups, 37 automated tests |
+| 🔒 **Production-grade** | Webhook signature check, de-duplication, per-customer ordering, 24h-window & template fallback, encrypted secrets, roles, audit log, backups, 41 automated tests |
 
 Works for **100+ business types** – see [docs/USE_CASES.md](docs/USE_CASES.md).
 
@@ -95,7 +95,7 @@ Anthropic Claude for AI (structured outputs, prompt caching) · SQLite FTS5 for 
 ## Testing
 
 ```bash
-npm test   # 37 tests: ordering, booking, AI/RAG, quick replies, languages, integrations, payments, webhooks – no network needed
+npm test   # 41 tests: ordering, booking, AI/RAG (Claude, OpenAI, Gemini), quick replies, languages, integrations, payments, webhooks – no network needed
 ```
 
 ## Important

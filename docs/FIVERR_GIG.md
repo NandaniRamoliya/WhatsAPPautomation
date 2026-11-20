@@ -21,7 +21,7 @@ I will build an AI whatsapp chatbot with booking, orders, CRM and official API
 | Field | Select | Remove (not delivered by this project) |
 |---|---|---|
 | Bot type | Customer Service & Support · E-commerce & Payments · Scheduling & Assistance · Food & Restaurant Services · Health & Wellness · Real Estate Assistance | Entertainment & Gaming, News, Travel |
-| AI engine | **Claude.ai** | Gemini, OpenAI GPT (not integrated – a buyer who picks you for GPT will be disappointed) |
+| AI engine | **Claude.ai · Open AI GPT · Gemini** (all three built in – the buyer chooses, using their own key) | – |
 | Programming language | **JavaScript / Node.js** | Python |
 | Tools & frameworks | **n8n** (we send events to n8n) | Hugging Face, LangChain, Telegram API |
 | Platforms | **WhatsApp** | Telegram, Instagram, Twitter, Websites |
@@ -119,6 +119,12 @@ Only to customers who opted in, using Meta-approved templates. This keeps your n
 **Do I own the bot?**
 Yes. It runs in your own accounts. The Premium package also includes the source code.
 
+**Which AI do you use – ChatGPT, Claude or Gemini?**
+Your choice. The bot works with Claude, OpenAI (ChatGPT) and Google Gemini – you can even switch later. The AI runs on your own account, answers only from your information, and orders/bookings still need the customer's confirmation.
+
+**Can it work on Instagram, Telegram or my website too?**
+This gig is for WhatsApp. The same bot engine can be connected to other channels – message me and I will tell you what is possible for your case.
+
 **How long does Meta approval take?**
 Message templates are usually approved within minutes to a day. Business verification can take a few days, but the bot can go live before it finishes.
 
@@ -166,7 +172,7 @@ Detailed steps: `docs/CLIENT_ONBOARDING.md` and the Developer Guide PDF (Part D)
 
 ### Standard – AI Assistant + Leads (target: 1 day)
 Everything in Basic, plus:
-- [ ] **AI assistant**: ANTHROPIC_API_KEY on the server, AI on, tone + assistant name + owner instructions
+- [ ] **AI assistant**: pick the engine the buyer wants (Claude / OpenAI GPT / Gemini) and paste **their** API key on the AI assistant page; AI on, tone + assistant name + owner instructions
 - [ ] **Knowledge base**: price list/menu/policies (PDF or text) + 2–5 website pages; "Try a question" with 10 real questions
 - [ ] **Enquiry form** with the buyer's lead questions
 - [ ] **Integrations**: Google Sheets (Apps Script) or HubSpot / Airtable / webhook → **Send test** ✅ → real test lead
@@ -193,7 +199,22 @@ Everything in Standard, plus **one** of:
 | Don't promise | Why |
 |---|---|
 | Twilio, 360dialog, WATI, Interakt bots | Not built in – this project uses Meta's Cloud API directly (buyers already on WATI/Interakt: connect via n8n webhooks, or migrate) |
-| Telegram / Instagram / website chat | Not part of this project (separate gig) |
-| GPT / Gemini specifically | AI runs on Claude |
+| Telegram / Instagram / website chat | Not built yet – the engine is channel-ready; tick these platforms only after their connector is built (see roadmap below) |
 | Unlimited / unsolicited bulk messaging | Against WhatsApp policy |
 | "Guaranteed" Meta approval times | Meta decides |
+
+---
+
+## 9. Roadmap: more platforms (same engine)
+
+Every message already flows through one shared engine (`handleIncoming` → flows → services), and WhatsApp is one
+"connector" (`routes/webhook.js` in, `whatsapp/sender.js` out). A new platform = a new connector; orders, bookings,
+AI, knowledge base, languages, integrations and the dashboard are reused as they are.
+
+| Platform | Effort | Then in the gig |
+|---|---|---|
+| Website chat widget | small–medium | tick "Websites" (or link it to your website-chatbot gig) |
+| Telegram | medium | tick "Telegram" |
+| Instagram / Facebook Messenger | large (Meta app review) | tick "Instagram" |
+
+Build one, test it, then tick it – never before.

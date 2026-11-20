@@ -53,8 +53,37 @@ function TryBox() {
       <${AsyncButton} variant="primary" disabled=${!q} onClick=${ask}>Ask<//></div>
     ${res && html`<div style="margin-top:12px">
       ${res.answerable ? html`<div class="bubble out" style="max-width:100%;white-space:pre-wrap">${res.answer}</div>` : html`<${Alert} tone="warn">The AI could not answer this from your information, so the customer would be offered "Talk to us". Add the answer to your knowledge base or FAQs.<//>`}
-      <p class="small muted" style="margin-top:8px">Understood as: <b>${res.intent}</b>${res.items?.length ? ` · ${res.items.length} item(s) for the cart` : ''}${res.suggest !== 'none' ? ` · suggests: ${res.suggest}` : ''} · knowledge mode: ${res.mode}</p>
+      <p class="small muted" style="margin-top:8px">Engine: <b>${res.engine}</b> (${res.model}) · Understood as: <b>${res.intent}</b>${res.items?.length ? ` · ${res.items.length} item(s) for the cart` : ''}${res.suggest !== 'none' ? ` · suggests: ${res.suggest}` : ''} · knowledge mode: ${res.mode}</p>
     </div>`}
+  <//>`;
+}
+
+const KEY_FIELD = { claude: 'anthropic_key', openai: 'openai_key', gemini: 'gemini_key' };
+const KEY_HELP = {
+  claude: 'console.anthropic.com → API keys (starts with sk-ant-).',
+  openai: 'platform.openai.com → API keys (starts with sk-). Any OpenAI-compatible service also works if your developer sets OPENAI_BASE_URL.',
+  gemini: 'aistudio.google.com → Get API key.',
+};
+
+function EngineCard({ data, ai, setAi, keys, setKeys, canEdit, save }) {
+  const provider = ai.provider || 'claude';
+  const info = data.engine.engines[provider];
+  const keyName = KEY_FIELD[provider];
+  const ownSaved = ai[`${keyName}_set`];
+  const ready = ownSaved || info.serverKey || keys[keyName];
+  return html`<${Card} title=${html`🧠 AI engine ${ready ? html`<${Badge} tone="ok">Ready<//>` : html`<${Badge} tone="warn">Needs an API key<//>`}`}>
+    <p class="muted small">Choose the AI your client prefers. Everything else – knowledge base, languages, safety rules, orders and bookings – works the same with all three.</p>
+    <div class="form-grid">
+      <${Field} f=${{ key: 'prov', label: 'AI engine', type: 'select', options: Object.entries(data.engine.engines).map(([value, e]) => ({ value, label: value === 'claude' ? `${e.label} – recommended` : e.label })) }}
+        value=${provider} onChange=${(x) => setAi({ provider: x, model: '' })} />
+      <${Field} f=${{ key: 'model', label: 'Model (optional)', placeholder: `${info.defaultModel} (default)`, help: 'Leave empty for the default. Use a smaller/cheaper model for very high volume.' }}
+        value=${ai.model || ''} onChange=${(x) => setAi({ model: x.trim() })} />
+      <${Field} f=${{ key: 'aikey', label: `${info.label} API key`, type: 'password', wide: true, autocomplete: 'off',
+        placeholder: ownSaved ? '•••••• saved – leave empty to keep' : info.serverKey ? 'Using the server key – paste one to use your own account' : 'Paste the API key',
+        help: `${KEY_HELP[provider]} The key is stored encrypted and AI usage is billed to this account.` }}
+        value=${keys[keyName] || ''} onChange=${(x) => setKeys({ ...keys, [keyName]: x })} />
+    </div>
+    ${canEdit && html`<div style="margin-top:12px"><${AsyncButton} variant="primary" onClick=${save}>💾 Save engine<//></div>`}
   <//>`;
 }
 
@@ -63,8 +92,13 @@ export function AiAssistant() {
   const { data, error, loading, reload } = useApi('/knowledge');
   const [modal, setModal] = useState(null);
   const [v, setV] = useState({ settings: structuredClone(biz.settings) });
+  const [keys, setKeys] = useState({});
   const canEdit = me.user.role !== 'staff';
-  const saveSettings = async () => { if (await act(() => api('/business', { method: 'PUT', body: { settings: { ai: v.settings.ai } } }), 'AI settings saved')) reloadBiz(); };
+  const saveSettings = async () => {
+    const secrets = Object.fromEntries(Object.entries(keys).filter(([, x]) => x));
+    const r = await act(() => api('/business', { method: 'PUT', body: { settings: { ai: v.settings.ai }, secrets } }), 'AI settings saved');
+    if (r) { setKeys({}); setV({ settings: structuredClone(r.business.settings) }); await reloadBiz(); reload(); }
+  };
   if (error) return html`<${Page} title="AI assistant"><${ErrorBox} error=${error} retry=${reload} /><//>`;
   if (loading && !data) return html`<${Page} title="AI assistant"><${Loading} /><//>`;
   const st = data.stats;
@@ -73,7 +107,8 @@ export function AiAssistant() {
   const setAi = (patch) => setV({ settings: { ...v.settings, ai: { ...ai, ...patch } } });
 
   return html`<${Page} title="AI assistant" subtitle="Your bot answers any question from YOUR information – in the customer's own language – and understands typed orders and booking requests.">
-    ${!data.aiAvailable && html`<${Alert} tone="warn">AI is not available on this server yet: the developer must add <code>ANTHROPIC_API_KEY</code> to the .env file. You can still prepare your knowledge base now.<//>`}
+    ${!data.aiAvailable && html`<${Alert} tone="warn">No API key yet for <b>${data.engine.label}</b>. Paste your key in <b>AI engine</b> below (or ask your developer to add it to the server). You can still prepare your knowledge base now.<//>`}
+    <${EngineCard} data=${data} ai=${ai} setAi=${setAi} keys=${keys} setKeys=${setKeys} canEdit=${canEdit} save=${saveSettings} />
     <div class="grid grid-2">
       <${Card} title="Settings">
         <div class="col">

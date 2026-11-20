@@ -21,7 +21,7 @@ import { schedule, runDueJobs } from '../services/jobs.js';
 import { broadcastAudience } from '../services/broadcasts.js';
 import * as KB from '../services/knowledge.js';
 import * as INT from '../services/integrations.js';
-import { aiAvailable, tryQuestion } from '../services/ai.js';
+import { aiAvailable, tryQuestion, engineFor, PROVIDERS } from '../services/ai.js';
 import { ensureCustomer } from '../services/customers.js';
 import { resumeBot, pauseBot } from '../engine/session.js';
 import { handleIncoming } from '../engine/index.js';
@@ -120,6 +120,9 @@ const SECRET_SETTINGS = {
   webhook_secret: 'integrations.webhook.secret_enc',
   hubspot_token: 'integrations.hubspot.token_enc',
   airtable_token: 'integrations.airtable.token_enc',
+  anthropic_key: 'ai.anthropic_key_enc',
+  openai_key: 'ai.openai_key_enc',
+  gemini_key: 'ai.gemini_key_enc',
 };
 const parentOf = (obj, path, create = false) => {
   const keys = path.split('.');
@@ -244,7 +247,7 @@ r.get('/links', (req, res) => {
     webhookUrl: `${config.publicUrl}/webhook`, verifyToken: config.verifyToken, publicUrl: config.publicUrl,
     waLink: link, shortLink: `${config.publicUrl}/q/${req.biz.slug}`, qrPng: link ? `${config.publicUrl}/q/${req.biz.slug}/qr.png` : '',
     razorpayWebhook: `${config.publicUrl}/webhooks/razorpay/${req.biz.id}`, stripeWebhook: `${config.publicUrl}/webhooks/stripe/${req.biz.id}`, graphVersion: config.graphVersion,
-    aiAvailable: Boolean(config.anthropicKey),
+    aiAvailable: aiAvailable(req.biz),
   });
 });
 
@@ -301,7 +304,7 @@ r.get('/stats', (req, res) => {
       faqs: Boolean(get('SELECT 1 FROM faqs WHERE business_id = ? LIMIT 1', b.id)),
       tested: Boolean(get(`SELECT 1 FROM messages WHERE business_id = ? AND phone LIKE 'sim%' LIMIT 1`, b.id)),
       templates: Object.values(b.settings.templates || {}).some((t) => t.name),
-      knowledge: aiAvailable() ? Boolean(get('SELECT 1 FROM kb_sources WHERE business_id = ? LIMIT 1', b.id) && b.settings.ai.enabled) : null,
+      knowledge: aiAvailable(b) ? Boolean(get('SELECT 1 FROM kb_sources WHERE business_id = ? LIMIT 1', b.id) && b.settings.ai.enabled) : null,
       menu: Boolean(get('SELECT 1 FROM quick_replies WHERE business_id = ? LIMIT 1', b.id)),
       live: Boolean(get(`SELECT 1 FROM messages WHERE business_id = ? AND direction = 'in' AND phone NOT LIKE 'sim%' LIMIT 1`, b.id)),
     },
@@ -649,7 +652,14 @@ r.get('/media/:id', async (req, res) => {
 });
 
 // ======================= KNOWLEDGE BASE (AI) =======================
-r.get('/knowledge', (req, res) => ok(res, { sources: KB.listSources(req.biz.id), stats: KB.stats(req.biz.id), limits: KB.LIMITS, aiAvailable: aiAvailable() }));
+const engineInfo = (biz) => {
+  const e = engineFor(biz);
+  return {
+    provider: e.provider, label: e.label, model: e.model, ownKey: e.ownKey, ready: Boolean(e.key),
+    engines: Object.fromEntries(Object.entries(PROVIDERS).map(([k, p]) => [k, { label: p.label, defaultModel: p.defaultModel(), serverKey: Boolean(p.serverKey()) }])),
+  };
+};
+r.get('/knowledge', (req, res) => ok(res, { sources: KB.listSources(req.biz.id), stats: KB.stats(req.biz.id), limits: KB.LIMITS, aiAvailable: aiAvailable(req.biz), engine: engineInfo(req.biz) }));
 r.get('/knowledge/:id', (req, res) => {
   const src = KB.getSource(req.biz.id, req.params.id);
   if (!src) throw new HttpError(404, 'Not found');
@@ -669,11 +679,11 @@ r.put('/knowledge/:id', (req, res) => ok(res, { source: KB.updateSource(req.biz.
 r.delete('/knowledge/:id', (req, res) => { KB.deleteSource(req.biz.id, req.params.id); ok(res); });
 r.post('/knowledge/search', (req, res) => ok(res, { passages: KB.search(req.biz.id, req.body.q || '', 6) }));
 r.post('/ai/try', async (req, res) => {
-  if (!aiAvailable()) throw new HttpError(400, 'AI is not available on this server: ANTHROPIC_API_KEY is not set');
+  if (!aiAvailable(req.biz)) throw new HttpError(400, `No API key for ${engineFor(req.biz).label}. Paste your key in AI assistant → AI engine (or ask your developer to add it to .env).`);
   const q = String(req.body.question || '').trim();
   if (!q) throw new HttpError(400, 'Type a question');
   const out = await tryQuestion(req.biz, q);
-  if (!out) throw new HttpError(502, 'The AI did not answer. Check the API key / try again.');
+  if (!out) throw new HttpError(502, `${engineFor(req.biz).label} did not answer. Check the API key, the model name and your account credit, then try again.`);
   ok(res, { result: out });
 });
 

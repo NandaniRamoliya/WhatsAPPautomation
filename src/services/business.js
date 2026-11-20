@@ -68,6 +68,11 @@ export const DEFAULT_SETTINGS = {
   },
   ai: {
     enabled: false,
+    provider: 'claude',              // claude | openai | gemini
+    model: '',                       // empty = the engine's default model (see .env)
+    anthropic_key_enc: '',           // the business's own AI keys (optional; else server keys)
+    openai_key_enc: '',
+    gemini_key_enc: '',
     order_parsing: true,             // "2 kilo aata aur 1 maggi" -> cart
     answer_questions: true,          // answers from business info, FAQs, catalogue, knowledge base
     use_knowledge: true,             // include the Knowledge base documents (RAG)

@@ -217,6 +217,8 @@ Menu → **AI assistant**. Turn it on and your bot answers *any* question from y
 customer's language (English, Hindi, Hinglish, Gujarati…). It also understands typed orders ("2 kilo aata aur 1 maggi")
 and booking requests.
 
+* **AI engine** – choose **Claude**, **OpenAI (ChatGPT)** or **Google Gemini** and paste your API key; everything
+  else works the same with all three. You can switch anytime.
 * **Knowledge base** – add your price list, menu, policies, doctor profiles, delivery areas, offers: paste text,
   upload a PDF/TXT/CSV, or import a page of your website. Switch a source off when it's outdated.
 * **Try a question** – type what a customer would ask and see the answer before customers do.

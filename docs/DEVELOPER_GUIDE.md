@@ -79,7 +79,7 @@ Useful commands:
 |---|---|
 | `npm start` | Run the server (dashboard + webhook + scheduler) |
 | `npm run dev` | Same, restarts on file changes |
-| `npm test` | Full test suite (37 tests: engine, booking, API, webhook, AI, knowledge, integrations, languages, payments) – no network needed |
+| `npm test` | Full test suite (41 tests: engine, booking, API, webhook, AI, knowledge, integrations, languages, payments) – no network needed |
 | `node docs/guides/build-pdf.cjs` / `node docs/fiverr/src/build.cjs` | Rebuild the PDF guides / Fiverr gallery images (needs Playwright) |
 | `npm run demo` | Seed demo businesses (idempotent) |
 | `npm run create-admin -- you@x.com "Passw0rd!"` | Create a super-admin or reset any login's password |
@@ -195,8 +195,9 @@ Only **server-level** settings live in `.env`. Everything business-specific is i
 | `GRAPH_VERSION` | v24.0 | Meta Graph API version – one-line upgrade |
 | `WA_VERIFY_TOKEN` | auto | Typed in Meta's webhook config. Shown in Settings → WhatsApp |
 | `META_APP_SECRET` | – | App secret for signature checks (per-business override possible) |
-| `ANTHROPIC_API_KEY` | – | Enables the optional AI features |
-| `AI_MODEL` | `claude-opus-5-5` | Model used for AI features |
+| `ANTHROPIC_API_KEY` / `AI_MODEL` | – / `claude-opus-5-5` | Server key + default model for the Claude engine |
+| `OPENAI_API_KEY` / `OPENAI_MODEL` / `OPENAI_BASE_URL` | – / `gpt-5-mini` / `https://api.openai.com/v1` | OpenAI engine (base URL lets you use any OpenAI-compatible API) |
+| `GEMINI_API_KEY` / `GEMINI_MODEL` | – / `gemini-2.5-flash` | Google Gemini engine |
 | `DEFAULT_TIMEZONE` / `DEFAULT_COUNTRY_CODE` / `DEFAULT_CURRENCY` | Asia/Kolkata / 91 / INR | Defaults for new businesses and phone normalisation |
 | `SCHEDULER_INTERVAL_MS` | 30000 | Job loop interval |
 | `SCHEDULER_ENABLED` | true | Disable on extra replicas (only one process should run jobs) |
@@ -368,7 +369,16 @@ To add another gateway (Cashfree, PhonePe, Stripe): add `createXLink()` + a webh
 ## 12. AI assistant, knowledge base and the new no-code features
 
 ### 12.1 AI brain (`src/services/ai.js`)
-Enabled when `ANTHROPIC_API_KEY` is set **and** the business turns on **AI assistant** in the dashboard.
+**Three engines, one brain.** Each business chooses **Claude** (default), **OpenAI GPT** (or any OpenAI-compatible
+API via `OPENAI_BASE_URL`: OpenRouter, Groq, Azure OpenAI, Ollama…) or **Google Gemini** on the AI assistant page,
+optionally with its **own API key** (stored encrypted in `settings.ai.<engine>_key_enc`; falls back to the server
+key in `.env`) and a model override. `engineFor(biz)` resolves engine, key and model; the prompt, the JSON schema,
+the safety rules and all validation are identical for every engine (adapters in `CALL.claude / .openai / .gemini`):
+Claude → `beta.messages.parse` + zod format + prompt caching; OpenAI → Chat Completions with
+`response_format: json_schema (strict)`; Gemini → `generateContent` with `responseSchema`. Every engine's output is
+re-validated with the same zod schema; refusals/safety blocks/HTTP errors → normal bot behaviour.
+
+Enabled when the business turns on **AI assistant** and a key exists for its engine.
 One structured call (`understand()`) classifies a free-text message and returns:
 
 ```js
@@ -574,6 +584,7 @@ npm test
 | `booking.test.js` | Triage → booking, double-booking guard, any-staff assignment, holidays, reminders → confirm, reschedule, cancel, aftercare, check-in branches, recall, template fallback after 24h, FAQ + lead, media |
 | `api.test.js` | Webhook verify, signature, de-dup, mark-read, auth, CSRF, roles, secret masking, CSV import/export, simulator + pay page + order status, inbox pause/resume |
 | `ai.test.js` | AI brain: request shape (model, cached system prompt, structured output, fallbacks, effort, chat memory), typed orders, KB answers with next-step buttons, booking/human intents, large-KB search mode |
+| `ai-engines.test.js` | OpenAI and Gemini engines against local mocks: own vs server key, strict JSON schema / responseSchema, model override, invalid output / safety block / API error → safe fallback, no key → AI not used |
 | `features.test.js` | Knowledge base (chunking, Unicode FTS incl. Gujarati, update/delete, file/HTML extraction, SSRF guard), quick replies (document/text/link/flow, menu pagination), language picker + Gujarati reminders + per-language overrides, integrations (signed webhook, Sheets, HubSpot, Airtable failure → retry + log, simulator excluded), Stripe checkout + signature, payment links, coexistence echo |
 
 Manual end-to-end: **Test the bot** page + "⏩ Fast-forward time" to fire reminders/check-ins immediately.
