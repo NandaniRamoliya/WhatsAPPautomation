@@ -1,0 +1,4 @@
+# crontab -e   (daily 03:10 backup of the database; keeps the last 14 copies in data/backups)
+10 3 * * * cd /home/ubuntu/WhatsAPPautomation && /usr/bin/npm run backup >> data/backup.log 2>&1
+# Optional: copy backups off the server (example with rclone to Google Drive / S3)
+# 30 3 * * * rclone copy /home/ubuntu/WhatsAPPautomation/data/backups remote:whatsapp-bot-backups
