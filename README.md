@@ -1,6 +1,6 @@
 # Replix <sub>by Indrix</sub>
 
-**Replix** is a ready-to-deliver WhatsApp Cloud API platform for any local business.** Product website: https://replix.pages.dev/ · made by [Indrix](https://nandaniramoliya.github.io/Indrix/).
+**Replix** is a ready-to-deliver WhatsApp Cloud API platform for any local business.** Product website: https://replix-cw3.pages.dev/ · made by [Indrix](https://nandaniramoliya.github.io/Indrix/).
  You enter the client's details in a
 friendly dashboard and the bot is ready: **orders, appointments, enquiries, reminders, payments, follow-ups,
 reviews, recalls and a shared inbox.** One server runs as many client businesses as you like.
@@ -84,7 +84,7 @@ Replix has two parts:
 
 | Part | Where | Cost |
 |---|---|---|
-| **Product website** (`product-site/`) – the marketing page | **Cloudflare Pages** → `https://replix.pages.dev/` | Free |
+| **Product website** (`product-site/`) – the marketing page | **Cloudflare Pages** → `https://replix-cw3.pages.dev/` | Free |
 | **Bot + dashboard** (Node.js server: webhooks, database, reminders) | Your PC / a VPS / Render, made reachable with **Cloudflare Tunnel** | Free tunnel; server from ₹0 (your PC) |
 
 ```bash

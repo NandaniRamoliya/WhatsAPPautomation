@@ -198,7 +198,7 @@ cd WhatsAPPautomation</code></pre></li>
     <tr><td><code>SCHEDULER_INTERVAL_MS</code> / <code>SCHEDULER_ENABLED</code></td><td>30000 / true</td><td>How often reminders run; disable on extra copies of the server.</td></tr>
     <tr><td><code>LOG_LEVEL</code></td><td>info</td><td>debug, info, warn, error.</td></tr>
     <tr><td><code>BRAND_NAME</code> / <code>BRAND_COMPANY</code> / <code>BRAND_COMPANY_URL</code></td><td>Replix / Indrix / Indrix website</td><td>Product name and maker shown on the login screen, sidebar, Help Centre and product website. Change them to white-label for another agency.</td></tr>
-    <tr><td><code>PRODUCT_SITE_URL</code></td><td>https://replix.pages.dev/</td><td>The product website (Help Centre footer; canonical address when publishing the site).</td></tr>
+    <tr><td><code>PRODUCT_SITE_URL</code></td><td>https://replix-cw3.pages.dev/</td><td>The product website (Help Centre footer; canonical address when publishing the site).</td></tr>
     <tr><td><code>SUPPORT_WHATSAPP</code> / <code>SUPPORT_EMAIL</code> / <code>SUPPORT_HOURS</code></td><td>– / – / Mon–Sat, 10am–7pm</td><td>Your support contacts. They turn on the WhatsApp / email buttons in every client's Help Centre and the "Get a demo" buttons on the product website.</td></tr>
     <tr><td><code>CLOUDFLARE_API_TOKEN</code> / <code>CLOUDFLARE_ACCOUNT_ID</code> / <code>SITE_PROJECT</code></td><td>– / – / replix</td><td>Only for <code>npm run site:publish</code>. Token permission: Account › Cloudflare Pages › Edit.</td></tr>
   </tbody>
@@ -755,7 +755,7 @@ pm2 restart whatsapp-bot</code></pre><p>New database migrations run automaticall
 <table class="t-narrow">
   <thead><tr><th>Part</th><th>How</th></tr></thead>
   <tbody>
-    <tr><td><b>Product website</b> (<code>product-site/</code>, static)</td><td><b>Cloudflare Pages</b>, free. Put <code>CLOUDFLARE_API_TOKEN</code> and <code>CLOUDFLARE_ACCOUNT_ID</code> in <code>.env</code>, run <code>npm run site:publish</code>. The first run creates the Pages project <code>replix</code> → <code>https://replix.pages.dev/</code> (if the name is taken Cloudflare adds a suffix; the script prints the real address). Script: <code>scripts/publish-site.js</code> – fills <code>{{placeholders}}</code>, writes robots.txt, sitemap.xml, 404 page and JSON-LD, then calls <code>wrangler pages deploy</code>.</td></tr>
+    <tr><td><b>Product website</b> (<code>product-site/</code>, static)</td><td><b>Cloudflare Pages</b>, free. Put <code>CLOUDFLARE_API_TOKEN</code> and <code>CLOUDFLARE_ACCOUNT_ID</code> in <code>.env</code>, run <code>npm run site:publish</code>. The first run creates the Pages project <code>replix</code> → <code>https://replix-cw3.pages.dev/</code> (if the name is taken Cloudflare adds a suffix; the script prints the real address). Script: <code>scripts/publish-site.js</code> – fills <code>{{placeholders}}</code>, writes robots.txt, sitemap.xml, 404 page and JSON-LD, then calls <code>wrangler pages deploy</code>.</td></tr>
     <tr><td><b>Bot + dashboard</b> (Node.js server)</td><td>Cannot run on Pages: it needs a process that is always on (webhooks, SQLite, scheduler). Run it on your PC or a VPS and expose it with <b>Cloudflare Tunnel</b>: <code>npm run tunnel</code> for a quick <code>trycloudflare.com</code> address (demos), or a named tunnel on your own domain for live clients (fixed address, free). Steps: <code>docs/DEVELOPER_GUIDE.md</code> section 20 → "Free with Cloudflare".</td></tr>
   </tbody>
 </table>

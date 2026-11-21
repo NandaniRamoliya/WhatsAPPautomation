@@ -64,7 +64,7 @@ export const config = {
     name: env('BRAND_NAME', 'Replix'),
     company: env('BRAND_COMPANY', 'Indrix'),
     companyUrl: env('BRAND_COMPANY_URL', 'https://nandaniramoliya.github.io/Indrix/'),
-    siteUrl: env('PRODUCT_SITE_URL', 'https://replix.pages.dev/'),
+    siteUrl: env('PRODUCT_SITE_URL', 'https://replix-cw3.pages.dev/'),
     supportWhatsapp: env('SUPPORT_WHATSAPP').replace(/\D/g, ''),
     supportEmail: env('SUPPORT_EMAIL'),
     supportHours: env('SUPPORT_HOURS', 'Mon–Sat, 10am–7pm'),

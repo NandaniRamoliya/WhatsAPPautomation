@@ -205,7 +205,7 @@ Only **server-level** settings live in `.env`. Everything business-specific is i
 | `LOG_LEVEL` | info | debug / info / warn / error |
 | `DB_FILE` | app.db | `:memory:` is used by tests |
 | `BRAND_NAME` / `BRAND_COMPANY` / `BRAND_COMPANY_URL` | Replix / Indrix / Indrix site | Name shown on login, sidebar wordmark, Help Centre, product website (`GET /api/about`) |
-| `PRODUCT_SITE_URL` | `https://replix.pages.dev/` | Product website address |
+| `PRODUCT_SITE_URL` | `https://replix-cw3.pages.dev/` | Product website address |
 | `SUPPORT_WHATSAPP` / `SUPPORT_EMAIL` / `SUPPORT_HOURS` | – | Turn on the support buttons in every Help Centre and the "Get a demo" buttons on the website |
 | `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` / `SITE_PROJECT` | – / – / replix | `npm run site:publish` only (token: Account › Cloudflare Pages › Edit) |
 
@@ -653,7 +653,7 @@ Every time you change `product-site/index.html`:
 npm run site:build      # optional preview: open product-site/dist/index.html
 npm run site:publish    # creates the Pages project "replix" the first time, then uploads
 ```
-The script prints the live address – normally **https://replix.pages.dev/**. If that name was already taken,
+The script prints the live address – normally **https://replix-cw3.pages.dev/**. If that name was already taken,
 Cloudflare adds a suffix (like PinPage's `pinpage-8no.pages.dev`): put the printed address in
 `PRODUCT_SITE_URL` and update the links on the Indrix website and portfolio.
 
