@@ -16,6 +16,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { config } from '../src/config.js';
 
 const SRC = path.join(config.root, 'product-site');
@@ -106,8 +107,11 @@ async function ensureProject() {
 
 function wrangler(args) {
   return new Promise((resolve) => {
-    const child = spawn('npx', ['--yes', 'wrangler@4', ...args], {
-      shell: process.platform === 'win32',
+    // Run npx through Node itself (no shell), so arguments with spaces work on Windows too.
+    const npxCli = path.join(path.dirname(process.execPath), process.platform === 'win32' ? '' : '..', process.platform === 'win32' ? '' : 'lib', 'node_modules', 'npm', 'bin', 'npx-cli.js');
+    const useCli = existsSync(npxCli);
+    const child = spawn(useCli ? process.execPath : 'npx', [...(useCli ? [npxCli] : []), '--yes', 'wrangler@4', ...args], {
+      shell: !useCli && process.platform === 'win32',
       stdio: 'inherit',
       env: { ...process.env, CLOUDFLARE_API_TOKEN: c.token, CLOUDFLARE_ACCOUNT_ID: c.account, WRANGLER_SEND_METRICS: 'false', CI: 'true' },
     });
@@ -129,7 +133,7 @@ async function publish() {
   const liveUrl = `https://${host}/`;
   const { dir, siteUrl } = await build(c.siteUrl || liveUrl);
   console.log(`Uploading ${path.relative(config.root, dir)} to Cloudflare Pages project "${c.project}"…`);
-  const code = await wrangler(['pages', 'deploy', dir, '--project-name', c.project, '--branch', 'main', '--commit-dirty=true', '--commit-message', `Replix site ${new Date().toISOString()}`]);
+  const code = await wrangler(['pages', 'deploy', dir, '--project-name', c.project, '--branch', 'main', '--commit-dirty=true', '--commit-message', `Replix-site-${new Date().toISOString().replace(/[:.]/g, '-')}`]);
   if (code !== 0) { console.error('\n✗ Upload failed (see the message above).'); process.exit(1); }
   console.log(`\n✓ ${c.name} website is live: ${liveUrl}${siteUrl !== liveUrl ? `  (canonical: ${siteUrl})` : ''}`);
   if (liveUrl !== `https://${c.project}.pages.dev/`) console.log(`ℹ Cloudflare gave the address ${liveUrl} – use it in PRODUCT_SITE_URL and on the Indrix / portfolio sites.`);
